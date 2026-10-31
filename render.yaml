@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: himrakshak
+    runtime: python
+    plan: free
+    buildCommand: "pip --version"
+    startCommand: "python -m himrakshak.server --allow-remote"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: HIMRAKSHAK_INGEST_MIN_INTERVAL_SECONDS
+        value: "3"
+      - key: HIMRAKSHAK_ADMIN_KEY
+        generateValue: true

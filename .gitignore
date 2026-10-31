@@ -1,0 +1,42 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Test and tool caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build and packaging output
+build/
+dist/
+*.egg-info/
+
+# Local editor and operating-system files
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Local runtime output
+*.log
+
+# Historical prototype snapshots kept locally, not part of the maintained project
+HimRakshak-Copilot/
+HimRakshak-OpenCode/
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.sqlite
+*.db

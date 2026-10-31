@@ -1,0 +1,263 @@
+{
+  "version": 1,
+  "author": "HimRakshak Team",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp",
+      "top": 0,
+      "left": 145,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potMoist",
+      "top": -55,
+      "left": -100,
+      "attrs": {
+        "value": "328"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potTilt",
+      "top": 90,
+      "left": -100,
+      "attrs": {
+        "value": "82"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "vibButton",
+      "top": 195,
+      "left": -25,
+      "attrs": {
+        "color": "blue",
+        "label": "VIBRATION BURST"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledGreen",
+      "top": -95,
+      "left": 390,
+      "attrs": {
+        "color": "green",
+        "label": "NORMAL"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledYellow",
+      "top": -30,
+      "left": 390,
+      "attrs": {
+        "color": "yellow",
+        "label": "WARNING"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledRed",
+      "top": 35,
+      "left": 390,
+      "attrs": {
+        "color": "red",
+        "label": "HIGH"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rGreen",
+      "top": -92,
+      "left": 330,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rYellow",
+      "top": -27,
+      "left": 330,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rRed",
+      "top": 38,
+      "left": 330,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer",
+      "top": 155,
+      "left": 385,
+      "attrs": {
+        "volume": "0.1"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "potMoist:VCC",
+      "esp:3V3",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potMoist:GND",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potMoist:SIG",
+      "esp:34",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potTilt:VCC",
+      "esp:3V3",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potTilt:GND",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potTilt:SIG",
+      "esp:35",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "vibButton:1.l",
+      "esp:18",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "vibButton:2.l",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "esp:25",
+      "rGreen:2",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "rGreen:1",
+      "ledGreen:A",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "ledGreen:C",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "esp:26",
+      "rYellow:2",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "rYellow:1",
+      "ledYellow:A",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "ledYellow:C",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "esp:27",
+      "rRed:2",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "rRed:1",
+      "ledRed:A",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "ledRed:C",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "esp:23",
+      "buzzer:1",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "buzzer:2",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ]
+  ],
+  "dependencies": {}
+}
