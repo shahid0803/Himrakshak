@@ -177,6 +177,26 @@ Confirm that:
 4. **Administrative Protection:** Simulated fault-injection endpoints cannot be tampered with by public internet users. When running with `--allow-remote`, mutations are blocked unless authorized with `X-HimRakshak-Admin`.
 5. **No Wildcard CORS:** The deployment follows a unified single-service model where the dashboard (`/`) and API (`/api/`) share the same origin, eliminating cross-origin exposure.
 
+### Phase 11.1 dashboard synchronization
+
+The dashboard determines its mode from the page origin and a successful
+same-origin `/api/health` response:
+
+- A `file:` URL is **STANDALONE SIMULATION** and uses browser-only state.
+- A loopback URL with a working API is **LOCAL BACKEND CONNECTED**.
+- Any other host with a working API is **CLOUD BACKEND CONNECTED**.
+- Failed probes are shown as **LOCAL BACKEND UNAVAILABLE** or
+  **CLOUD BACKEND UNAVAILABLE** and retain the last server values without
+  generating replacement cloud readings.
+
+In connected modes, `/api/state`, `/api/stations`, and the selected
+`/api/stations/{node_id}` response hydrate the dashboard. The page polls these
+same-origin endpoints every five seconds, prevents overlapping refreshes,
+pauses polling while hidden, and refreshes on visibility recovery. Public
+reading ingestion remains available for sensor sliders and Wokwi packet import;
+remote scenario and fault controls remain disabled because they require the
+protected administrative header and the browser never receives the admin key.
+
 ---
 
 ## 5. Cold-start and ephemeral-memory limitations

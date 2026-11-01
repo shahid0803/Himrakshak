@@ -12,9 +12,16 @@ python -m himrakshak.server --port 8765 --seed 42
 Open `http://127.0.0.1:8765/`. No package installation or internet connection
 is required. Opening `index.html` directly keeps the existing standalone
 browser simulation. When served by the local server, the dashboard probes `GET /api/health`,
-loads the station roster, and uses the Python API as the authoritative
-assessment source. If that probe fails, it remains in standalone mode without
-repeated requests.
+loads the station roster and selected station, and uses the Python API as the
+authoritative assessment, history, sequence, and telemetry source. The same
+same-origin requests are used by the Render deployment, so the dashboard does
+not contain a hard-coded cloud URL. Connected pages refresh the health,
+application state, roster, and selected station every five seconds (without
+overlapping requests), pause while hidden, and refresh immediately when shown.
+An API outage is displayed as `LOCAL BACKEND UNAVAILABLE` or
+`CLOUD BACKEND UNAVAILABLE`; it never silently falls back to browser telemetry.
+Opening `index.html` directly keeps the existing standalone browser simulation
+and is labelled `STANDALONE SIMULATION`.
 
 ## Endpoints
 

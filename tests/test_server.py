@@ -131,6 +131,26 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.request("PUT", "/api/health")[0], 405)
         self.assertEqual(self.request("GET", "/")[0], 200)
 
+    def test_dashboard_uses_same_origin_backend_sync(self):
+        status, body = self.request("GET", "/")
+        self.assertEqual(status, 200)
+        html = body.decode("utf-8")
+        for marker in (
+            "STANDALONE SIMULATION",
+            "LOCAL BACKEND CONNECTED",
+            "CLOUD BACKEND CONNECTED",
+            "CLOUD BACKEND UNAVAILABLE",
+            "refreshBackendState",
+            "setInterval(() =>",
+            "5000",
+            "/api/health",
+            "/api/state",
+            "/api/stations",
+        ):
+            self.assertIn(marker, html)
+        self.assertNotIn("himrakshak.onrender.com", html)
+        self.assertNotIn("HIMRAKSHAK_ADMIN_KEY", html)
+
     def test_station_roster_detail_and_isolation(self):
         status, overview = self.request("GET", "/api/stations")
         self.assertEqual(status, 200)

@@ -34,7 +34,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 <div class="app">
 <header class="topbar">
   <div class="brand"><div class="logo">⛰</div><div><h1>HimRakshak</h1><p>Offline landslide early-warning · prototype console</p></div></div>
-  <div class="top-actions"><span class="pill"><span class="dot"></span> SOFTWARE SIMULATION</span><span class="pill" id="modePill">LOCAL / NO CLOUD</span></div>
+  <div class="top-actions"><span class="pill"><span class="dot"></span> SOFTWARE SIMULATION</span><span class="pill" id="modePill">STANDALONE SIMULATION</span></div>
 </header>
 <main class="main">
   <section class="intro"><div><div class="eyebrow">Field intelligence console / demo 01</div><h2>Monitor the slope. Warn before the road is at risk.</h2><p>Explore simulated soil moisture, tilt and vibration signals. Trigger test scenarios and observe how a local risk engine and a simulated radio receiver respond.</p></div><div class="demo-label">◉ <span id="modeIndicator">Standalone browser mode · no API server</span></div></section>
@@ -74,8 +74,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
           <div class="tooltip">Risk score is an illustrative rule-based demo, not a calibrated probability or a validated landslide prediction.</div>
         </div>
       </section>
-      <section class="card"><div class="card-head"><div><h3>Recent simulated telemetry</h3><p>Values update when you change a sensor or run a scenario.</p></div><span class="tag">LAST 20 SAMPLES</span></div><div class="chart-wrap"><div class="chart-legend"><span><i class="legend-dot" style="background:#246bfe"></i>Moisture</span><span><i class="legend-dot" style="background:#e39b26"></i>Tilt × 8 (visual scale)</span><span><i class="legend-dot" style="background:#9467d8"></i>Vibration</span></div><svg class="chart-svg" viewBox="0 0 640 180" preserveAspectRatio="none" id="chartSvg" aria-label="Simulated telemetry line chart"></svg></div></section>
-      <section class="card"><div class="card-head"><div><h3>Event history</h3><p>Local browser log · export as CSV for your report.</p></div><button class="small-btn" id="exportBtn">↓ Export CSV</button></div><div class="body"><div class="log-table"><table class="logs"><thead><tr><th>Time</th><th>Event</th><th>Risk</th><th>Link</th></tr></thead><tbody id="logRows"></tbody></table></div><div class="logs-footer"><span class="micro" id="logCount">0 logged events</span><button class="small-btn" id="clearLogBtn">Clear log</button></div></div></section>
+      <section class="card"><div class="card-head"><div><h3>Recent telemetry</h3><p id="chartDescription">Values update when you change a sensor or run a scenario.</p></div><span class="tag">LAST 20 SAMPLES</span></div><div class="chart-wrap"><div class="chart-legend"><span><i class="legend-dot" style="background:#246bfe"></i>Moisture</span><span><i class="legend-dot" style="background:#e39b26"></i>Tilt × 8 (visual scale)</span><span><i class="legend-dot" style="background:#9467d8"></i>Vibration</span></div><svg class="chart-svg" viewBox="0 0 640 180" preserveAspectRatio="none" id="chartSvg" aria-label="Telemetry line chart"></svg></div></section>
+      <section class="card"><div class="card-head"><div><h3>Event history</h3><p id="historyDescription">Local browser log · export as CSV for your report.</p></div><button class="small-btn" id="exportBtn">↓ Export CSV</button></div><div class="body"><div class="log-table"><table class="logs"><thead><tr><th>Time</th><th>Event</th><th>Risk</th><th>Link</th></tr></thead><tbody id="logRows"></tbody></table></div><div class="logs-footer"><span class="micro" id="logCount">0 logged events</span><button class="small-btn" id="clearLogBtn">Clear log</button></div></div></section>
     </div>
     <div class="stack">
       <section class="card"><div class="card-head"><div><h3>Scenario controls</h3><p>Move the virtual sensor readings to test the warning logic.</p></div><span class="tag">INTERACTIVE</span></div><div class="body"><div class="controls">
@@ -113,7 +113,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     nodeId: 'HR-01', moisture: 32, tilt: 1.2, vibration: 12, battery: 82,
     connected: true, sequence: 1, packets: 1, received: null,
     history: [], logs: [], lastReceivedAt: Date.now(),
-    backend: false, requestGeneration: 0, currentStation: 'HR-01',
+    backend: false, apiAvailable: false, mode: window.location.protocol === 'file:' ? 'standalone' : 'probing',
+    requestGeneration: 0, refreshInFlight: false, refreshTimer: null, currentStation: 'HR-01',
     stations: {}, stationOverview: []
   };
   const stationLabels = {'HR-01':'Virtual Station 1','HR-02':'Virtual Station 2','HR-03':'Virtual Station 3'};
@@ -179,6 +180,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     return { score, level, title, copy, reasons };
   }
 
+  const isBackendMode = () => state.mode !== 'standalone';
+  const canUseBackend = () => state.backend && state.apiAvailable;
   const localAssessment = () => evaluate(state.moisture, state.tilt, state.vibration);
   const currentReading = () => ({
     node_id: state.nodeId,
@@ -224,12 +227,16 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       renderLocal();
       return false;
     }
-    if (state.backend) {
+    if (canUseBackend()) {
       return sendBackendReading({
         ...currentReading(),
-        sequence: state.sequence + 1,
+        sequence: state.sequence,
         transport: 'PYTHON_SIMULATOR'
       }, event);
+    }
+    if (isBackendMode()) {
+      showFeedback('Backend data is unavailable. Reconnecting; local values were not presented as cloud telemetry.', 'error');
+      return false;
     }
     state.sequence += 1;
     state.packets += 1;
@@ -268,35 +275,73 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   }
 
   async function backendRequest(path, options = {}) {
-      const response = await fetch(path, {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), options.timeout || 12000);
+    let response;
+    try {
+      response = await fetch(path, {
         ...options,
+        signal: controller.signal,
         headers: {'Content-Type': 'application/json', ...(options.headers || {})}
       });
-      let payload = null;
-      try { payload = await response.json(); } catch (_) {}
-      if (!response.ok) {
-        const error = new Error(payload?.error?.message || 'Local API request failed');
-        error.status = response.status;
-        throw error;
-      }
-      return payload;
+    } catch (err) {
+      if (err.name === 'AbortError') throw Object.assign(new Error('The backend did not respond before the timeout.'), {status: 0});
+      throw Object.assign(new Error('The backend could not be reached.'), {status: 0});
+    } finally {
+      window.clearTimeout(timeout);
     }
+    let payload = null;
+    try { payload = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      const error = new Error(payload?.error?.message || `API request failed with HTTP ${response.status}`);
+      error.status = response.status;
+      error.retryAfter = response.headers.get('Retry-After');
+      throw error;
+    }
+    return payload;
+  }
 
   function backendErrorMessage(err, action) {
-      if (err.status === 401 || err.status === 403) {
-        return 'Remote administrative controls are unavailable in the browser. Read-only station data remains available.';
-      }
-      return action + ': ' + err.message;
+    if (err.status === 401 || err.status === 403) {
+      return 'Remote administrative controls are unavailable in the browser. Read-only station data remains available.';
     }
+    if (err.status === 429) {
+      return action + ': rate limited by the backend. Retry after ' + (err.retryAfter || 'a short delay') + '.';
+    }
+    if (err.status === 404) return action + ': the requested station or endpoint was not found.';
+    if (err.status === 409) return action + ': the backend rejected this packet because it conflicts with the current station sequence or link state.';
+    return action + ': ' + err.message;
+  }
 
-  function setBackendIndicator(backend) {
-      state.backend = backend;
-        $('modeIndicator').textContent = backend
-          ? 'Connected backend mode · local Python API'
-          : window.location.protocol === 'file:'
-            ? 'Standalone browser mode · no API server'
-            : 'Static hosted demo · Python API unavailable';
+  function setBackendIndicator(mode, available = mode === 'local' || mode === 'cloud') {
+    state.mode = mode;
+    state.backend = mode !== 'standalone';
+    state.apiAvailable = available;
+    const labels = {
+      standalone: ['STANDALONE SIMULATION', 'Standalone browser mode · no API server'],
+      local: ['LOCAL BACKEND CONNECTED', 'Connected backend mode · local Python API'],
+      cloud: ['CLOUD BACKEND CONNECTED', 'Connected backend mode · remote cloud API'],
+      'local-unavailable': ['LOCAL BACKEND UNAVAILABLE', 'Local Python API unavailable · retrying'],
+      'cloud-unavailable': ['CLOUD BACKEND UNAVAILABLE', 'Remote cloud API unavailable · retrying'],
+      probing: ['CONNECTING…', 'Checking the Python API…']
+    };
+    const label = labels[mode] || labels.probing;
+    $('modePill').textContent = label[0];
+    $('modeIndicator').textContent = label[1];
+    $('modePill').style.color = available ? '#dbe7f8' : '#ffd7d7';
+    const dot = document.querySelector('.dot');
+    if (dot) {
+      dot.style.background = available ? '#57d69a' : mode === 'probing' ? '#f5c451' : '#ef7777';
+      dot.style.boxShadow = `0 0 0 3px ${available ? '#57d69a24' : mode === 'probing' ? '#f5c45124' : '#ef777724'}`;
     }
+    $('historyDescription').textContent = available ? 'Backend event history · export the current station view as CSV.' : mode === 'standalone' ? 'Local browser log · export as CSV for your report.' : 'Backend event history is unavailable while disconnected.';
+    $('chartDescription').textContent = available ? 'Backend-derived telemetry for the selected station.' : mode === 'standalone' ? 'Values update when you change a sensor or run a scenario.' : 'Waiting for backend telemetry.';
+    ['rainBtn','tiltBtn','vibrationBtn','normalBtn','dropPacketBtn','delayPacketBtn','releasePacketBtn','duplicatePacketBtn','stalePacketBtn'].forEach(id => {
+      const button = $(id);
+      if (button) button.disabled = mode === 'cloud' || mode === 'cloud-unavailable' || mode === 'probing';
+    });
+    $('clearLogBtn').disabled = available;
+  }
 
   function applyBackendResult(result, eventName = 'Backend telemetry update') {
       const reading = result.reading;
@@ -304,7 +349,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       const ui = uiAssessment(assessment);
       state.nodeId = reading.node_id;
       state.battery = reading.battery_pct;
-      state.sequence = reading.sequence;
+      state.sequence = reading.sequence + 1;
       state.packets = Math.max(state.packets, reading.sequence + 1);
       updateValues(reading.soil_moisture_pct, reading.tilt_deg, reading.vibration_level, true);
       state.received = {...reading, ...ui, receivedAtMs: Date.now(), backendAssessment: assessment};
@@ -317,7 +362,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       if (summary) {
         summary.latest = {reading, assessment};
         summary.next_sequence = reading.sequence + 1;
-        summary.event_count = (summary.event_count || 0) + 1;
+        summary.event_count = Math.max(summary.event_count || 0, state.logs.length);
       }
       renderStations();
     }
@@ -328,10 +373,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         const result = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation) + '/readings', {method: 'POST', body: JSON.stringify(reading)});
         if (generation !== state.requestGeneration) return false;
         applyBackendResult(result, eventName);
-        showFeedback('Packet accepted by the local Python API.', 'success');
+        showFeedback('Packet accepted by the backend.', 'success');
+        await refreshBackendState();
         return true;
       } catch (err) {
-        showFeedback(backendErrorMessage(err, 'Local API rejected the packet'), 'error');
+        showFeedback(backendErrorMessage(err, 'Backend rejected the packet'), 'error');
         return false;
       }
     }
@@ -342,8 +388,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         const result = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation) + '/simulate', {method: 'POST', body: JSON.stringify({scenario})});
         if (generation !== state.requestGeneration) return;
         applyBackendResult(result, eventName);
-        const detail = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation));
-        if (generation === state.requestGeneration) loadStationDetail(detail);
+        await refreshBackendState();
         showFeedback('Scenario accepted by the local Python API.', 'success');
       } catch (err) {
         showFeedback(backendErrorMessage(err, 'Local API scenario failed'), 'error');
@@ -365,8 +410,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     }
 
     async function reliabilityAction(action, reading) {
-      if (!state.backend) {
-        showFeedback('Communication fault controls require the local Python API; standalone mode remains available.', 'error');
+      if (!canUseBackend() || state.mode !== 'local') {
+        showFeedback('Communication fault controls are available only with the local Python backend.', 'error');
         return;
       }
       try {
@@ -377,8 +422,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
           $('reliabilitySummary').textContent = `Simulated link ${result.communication.connection_state}; pending ${result.communication.pending_packets}; delivered ${result.communication.packets_delivered}; dropped ${result.communication.packets_dropped}.`;
         }
         showFeedback('Simulated communication outcome: ' + result.outcome + '.', result.outcome === 'delivered' || result.outcome === 'reconnected' ? 'success' : 'error');
-        const detail = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation));
-        loadStationDetail(detail);
+        await refreshBackendState();
       } catch (err) {
         showFeedback(backendErrorMessage(err, 'Communication simulation failed'), 'error');
       }
@@ -421,11 +465,21 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         target.received = null;
         target.logs = [];
         target.history = [];
+        target.moisture = 0;
+        target.tilt = 0;
+        target.vibration = 0;
+        target.battery = 0;
       }
-      target.logs = (station.events || []).slice().reverse().map(event => {
+      const events = (station.events || []).slice().reverse();
+      target.logs = events.map(event => {
         const reading = event.reading, assessment = uiAssessment(event.assessment);
         return {time:new Date(event.timestamp || reading.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}), event:event.event || 'Backend accepted reading', node_id:reading.node_id, moisture:reading.soil_moisture_pct, tilt:reading.tilt_deg, vibration:reading.vibration_level, battery:reading.battery_pct, risk:assessment.level, score:assessment.score, link:'RECEIVED'};
       }).slice(0, 50);
+      target.history = events.slice().reverse().slice(-20).map(event => ({
+        m: Number(event.reading.soil_moisture_pct),
+        t: Number(event.reading.tilt_deg),
+        v: Number(event.reading.vibration_level)
+      }));
       if (latest) {
         target.received = {...latest.reading, ...uiAssessment(latest.assessment), receivedAtMs:Date.now(), backendAssessment:latest.assessment};
         target.moisture = latest.reading.soil_moisture_pct; target.tilt = latest.reading.tilt_deg;
@@ -437,6 +491,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         $('reliabilitySummary').textContent = `Simulated link ${station.communication.connection_state}; pending ${station.communication.pending_packets}; delivered ${station.communication.packets_delivered}; dropped ${station.communication.packets_dropped}.`;
       }
       restoreStation(state.currentStation);
+      state.connected = target.connected;
       renderLogs(); renderLocal(); renderRemote(); renderChart(); renderStations();
     }
 
@@ -445,7 +500,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       saveCurrentStation();
       restoreStation(id);
       $('stationSelect').value = id;
-      if (state.backend) {
+      if (isBackendMode()) {
         try { loadStationDetail(await backendRequest('/api/stations/' + encodeURIComponent(id))); }
         catch (err) { showFeedback('Could not load station: ' + err.message, 'error'); }
       } else {
@@ -471,28 +526,60 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       $('stationSummary').textContent = `${state.currentStation} · ${stationLabels[state.currentStation]} · ${ensureStation(state.currentStation).logs.length} events` + (communication ? ` · ${communication.connection_state}` : '');
     }
 
-  async function detectBackend() {
-      if (window.location.protocol === 'file:') {
-        setBackendIndicator(false);
-        return;
-      }
+  async function refreshBackendState() {
+      if (window.location.protocol === 'file:' || state.refreshInFlight || document.hidden) return;
+      state.refreshInFlight = true;
+      const generation = ++state.requestGeneration;
       try {
-        await backendRequest('/api/health');
-        setBackendIndicator(true);
-        const overview = await backendRequest('/api/stations');
+        const [health, appState, overview, detail] = await Promise.all([
+          backendRequest('/api/health'),
+          backendRequest('/api/state'),
+          backendRequest('/api/stations'),
+          backendRequest('/api/stations/' + encodeURIComponent(state.currentStation))
+        ]);
+        if (generation !== state.requestGeneration) return;
+        const localHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+        setBackendIndicator(localHost ? 'local' : 'cloud', true);
         state.stationOverview = overview.stations || [];
-        loadStationDetail(await backendRequest('/api/stations/' + state.currentStation));
-        showFeedback('Connected to the local Python API.', 'success');
-      } catch (_) {
-        setBackendIndicator(false);
+        loadStationDetail(detail);
+        if (appState && appState.events && state.currentStation === 'HR-01' && !detail.station?.events?.length) {
+          loadBackendState(appState);
+        }
+        if (health && health.station_count !== 3) {
+          showFeedback('Backend connected, but the station roster is incomplete.', 'error');
+        }
+      } catch (err) {
+        const localHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+        setBackendIndicator(localHost ? 'local-unavailable' : 'cloud-unavailable', false);
+        showFeedback(backendErrorMessage(err, localHost ? 'Local backend refresh failed' : 'Cloud backend refresh failed'), 'error');
+      } finally {
+        state.refreshInFlight = false;
       }
     }
+
+    async function detectBackend() {
+      if (window.location.protocol === 'file:') {
+        setBackendIndicator('standalone', false);
+        return;
+      }
+      setBackendIndicator('probing', false);
+      await refreshBackendState();
+      if (!state.refreshTimer) {
+        state.refreshTimer = window.setInterval(() => {
+          if (!document.hidden) refreshBackendState();
+        }, 5000);
+      }
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && isBackendMode()) refreshBackendState();
+    });
   renderLocal();
 
   function renderLocal() {
-    const r = state.backend && state.received?.backendAssessment
+    const r = state.received?.backendAssessment
       ? uiAssessment(state.received.backendAssessment)
-      : localAssessment();
+      : state.mode === 'standalone' ? localAssessment() : null;
     $('nodeLabel').textContent = 'Sensor node · ' + state.nodeId;
     $('moistureVal').textContent = state.moisture;
     $('tiltVal').textContent = state.tilt.toFixed(1);
@@ -510,38 +597,41 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     $('vibrationFill').style.background = state.vibration >= 65 ? 'var(--red)' : state.vibration >= 45 ? 'var(--yellow)' : 'var(--blue)';
     $('batteryFill').style.background = state.battery <= 20 ? 'var(--red)' : state.battery <= 40 ? 'var(--yellow)' : 'var(--green)';
 
-    $('kpiRisk').textContent = r.level;
-    $('kpiRisk').style.color = colorFor(r.level);
-    $('kpiRiskFoot').textContent = 'Local simulated risk state';
-    $('readStateTag').textContent = r.level;
-    $('readStateTag').style.color = colorFor(r.level);
-    $('readStateTag').style.background = r.level === 'CRITICAL' ? 'var(--soft-red)' : r.level === 'WARNING' ? 'var(--soft-yellow)' : 'var(--soft-green)';
-    $('scoreVal').textContent = r.score;
-    $('scoreRing').style.background = `conic-gradient(${colorFor(r.level)} ${r.score * 3.6}deg,#e9eef3 ${r.score * 3.6}deg 360deg)`;
-    $('riskTitle').textContent = r.title;
-    $('riskCopy').textContent = r.copy;
-    $('riskState').textContent = r.level;
-    $('riskState').className = 'risk-state ' + classFor(r.level);
+    const level = r ? r.level : 'NO DATA';
+    const colour = r ? colorFor(r.level) : 'var(--muted)';
+    $('kpiRisk').textContent = level;
+    $('kpiRisk').style.color = colour;
+    $('kpiRiskFoot').textContent = state.mode === 'standalone' ? 'Local simulated risk state' : state.apiAvailable ? 'Backend-calculated risk' : 'Backend unavailable · last known state only';
+    $('readStateTag').textContent = level;
+    $('readStateTag').style.color = colour;
+    $('readStateTag').style.background = r ? (r.level === 'CRITICAL' ? 'var(--soft-red)' : r.level === 'WARNING' ? 'var(--soft-yellow)' : 'var(--soft-green)') : '#eef2f7';
+    $('scoreVal').textContent = r ? r.score : '—';
+    $('scoreRing').style.background = r ? `conic-gradient(${colour} ${r.score * 3.6}deg,#e9eef3 ${r.score * 3.6}deg 360deg)` : '#e9eef3';
+    $('riskTitle').textContent = r ? r.title : 'No backend reading yet';
+    $('riskCopy').textContent = r ? r.copy : state.mode === 'standalone' ? 'Measurements remain within the baseline used for this software demonstration.' : 'The selected station has not accepted a reading, or the backend is unavailable.';
+    $('riskState').textContent = level;
+    $('riskState').className = 'risk-state ' + (r ? classFor(r.level) : '');
     $('riskReasons').replaceChildren();
-    (r.reasons.length ? r.reasons : ['No demo rule crossed']).forEach(reason => {
+    (r ? (r.reasons.length ? r.reasons : ['No demo rule crossed']) : ['No server assessment available']).forEach(reason => {
       const chip = document.createElement('span');
-      chip.className = 'reason-chip ' + (r.level === 'CRITICAL' ? 'critical' : r.level === 'WARNING' ? 'warning' : '');
+      chip.className = 'reason-chip ' + (r && r.level === 'CRITICAL' ? 'critical' : r && r.level === 'WARNING' ? 'warning' : '');
       chip.textContent = reason;
       $('riskReasons').appendChild(chip);
     });
-    $('slopeBadge').textContent = r.level === 'CRITICAL' ? '● CRITICAL TEST PATTERN' : r.level === 'WARNING' ? '● ANOMALY / REVIEW' : '● STABLE BASELINE';
-    $('slopeBadge').style.color = colorFor(r.level);
+    $('slopeBadge').textContent = r ? (r.level === 'CRITICAL' ? '● CRITICAL TEST PATTERN' : r.level === 'WARNING' ? '● ANOMALY / REVIEW' : '● STABLE BASELINE') : '● WAITING FOR BACKEND';
+    $('slopeBadge').style.color = colour;
     $('sensors').setAttribute('transform', `translate(325 93) rotate(${Math.min(15, state.tilt) * 1.5})`);
     $('rainDrops').setAttribute('opacity', state.moisture >= 60 ? '1' : '0');
     $('kpiPackets').textContent = String(state.packets).padStart(3, '0');
-    $('kpiLink').textContent = state.connected ? 'CONNECTED' : 'LOST LINK';
-    $('kpiLink').style.color = state.connected ? 'var(--green)' : 'var(--red)';
-    $('kpiLinkFoot').textContent = state.connected ? 'Simulated link · no actual RF' : 'No new simulated packets delivered';
-    $('linkTitle').textContent = state.connected ? 'Simulated radio connected' : 'Simulated radio disconnected';
-    $('linkSub').textContent = state.connected ? 'Packets can be sent in this browser demo' : 'Local node changes; receiver data is frozen';
-    $('linkSymbol').style.background = state.connected ? 'var(--soft-green)' : 'var(--soft-red)';
-    $('linkSymbol').style.color = state.connected ? 'var(--green)' : 'var(--red)';
-    $('linkToggle').textContent = state.connected ? 'Disconnect' : 'Reconnect';
+    const linkReady = state.mode === 'standalone' ? state.connected : state.apiAvailable && state.connected;
+    $('kpiLink').textContent = state.mode === 'standalone' ? (state.connected ? 'CONNECTED' : 'LOST LINK') : state.apiAvailable ? (state.connected ? 'CONNECTED' : 'LOST LINK') : 'UNAVAILABLE';
+    $('kpiLink').style.color = linkReady ? 'var(--green)' : 'var(--red)';
+    $('kpiLinkFoot').textContent = state.mode === 'standalone' ? (state.connected ? 'Simulated link · no actual RF' : 'No new simulated packets delivered') : state.apiAvailable ? 'Backend station connection state' : 'Backend connection unavailable';
+    $('linkTitle').textContent = state.mode === 'standalone' ? (state.connected ? 'Simulated radio connected' : 'Simulated radio disconnected') : state.apiAvailable ? (state.connected ? 'Backend station connected' : 'Backend station disconnected') : 'Backend connection unavailable';
+    $('linkSub').textContent = state.mode === 'standalone' ? (state.connected ? 'Packets can be sent in this browser demo' : 'Local node changes; receiver data is frozen') : state.apiAvailable ? 'Packets are sent to the Python API' : 'Last known server state is preserved';
+    $('linkSymbol').style.background = linkReady ? 'var(--soft-green)' : 'var(--soft-red)';
+    $('linkSymbol').style.color = linkReady ? 'var(--green)' : 'var(--red)';
+    $('linkToggle').textContent = state.mode === 'standalone' ? (state.connected ? 'Disconnect' : 'Reconnect') : 'Refresh';
     $('linkToggle').className = 'toggle ' + (state.connected ? '' : 'on');
     saveCurrentStation();
     renderStations();
@@ -654,6 +744,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   });
 
   $('clearLogBtn').addEventListener('click', () => {
+    if (isBackendMode()) {
+      showFeedback('Backend event history is read-only; refresh the station to see the server history.', 'error');
+      return;
+    }
     state.logs = []; renderLogs(); showFeedback('The session event log was cleared.', 'success');
   });
 
@@ -687,10 +781,15 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     });
   });
 
-  $('rainBtn').addEventListener('click', () => state.backend && state.connected ? simulateBackend('heavy_rain', 'Heavy-rain test scenario') : setValues(Math.max(75,state.moisture+38),Math.max(4,state.tilt),Math.max(28,state.vibration),'Heavy-rain test scenario'));
-  $('tiltBtn').addEventListener('click', () => state.backend && state.connected ? simulateBackend('slope_shift', 'Slope-shift test scenario') : setValues(Math.max(65,state.moisture),Math.max(9,state.tilt+7),Math.max(55,state.vibration),'Slope-shift test scenario'));
-  $('vibrationBtn').addEventListener('click', () => state.backend && state.connected ? simulateBackend('vibration_burst', 'Vibration-burst test scenario') : setValues(state.moisture,Math.max(1.5,state.tilt),88,'Vibration-burst test scenario'));
-  $('normalBtn').addEventListener('click', () => state.backend && state.connected ? simulateBackend('normal', 'Reset to baseline') : setValues(32,1.2,12,'Reset to baseline'));
+  const runScenario = (scenario, eventName, fallback) => {
+    if (canUseBackend() && state.mode === 'local' && state.connected) simulateBackend(scenario, eventName);
+    else if (state.mode === 'standalone') fallback();
+    else showFeedback('Scenario controls are unavailable while the backend is disconnected or protected remotely.', 'error');
+  };
+  $('rainBtn').addEventListener('click', () => runScenario('heavy_rain', 'Heavy-rain test scenario', () => setValues(Math.max(75,state.moisture+38),Math.max(4,state.tilt),Math.max(28,state.vibration),'Heavy-rain test scenario')));
+  $('tiltBtn').addEventListener('click', () => runScenario('slope_shift', 'Slope-shift test scenario', () => setValues(Math.max(65,state.moisture),Math.max(9,state.tilt+7),Math.max(55,state.vibration),'Slope-shift test scenario')));
+  $('vibrationBtn').addEventListener('click', () => runScenario('vibration_burst', 'Vibration-burst test scenario', () => setValues(state.moisture,Math.max(1.5,state.tilt),88,'Vibration-burst test scenario')));
+  $('normalBtn').addEventListener('click', () => runScenario('normal', 'Reset to baseline', () => setValues(32,1.2,12,'Reset to baseline')));
   $('packetBtn').addEventListener('click', () => sendPacket('Manual packet send'));
   $('stationSelect').addEventListener('change', event => switchStation(event.target.value));
 
@@ -700,9 +799,13 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       if (!data || Array.isArray(data) || typeof data !== 'object') {
         throw new Error('Packet must be a JSON object.');
       }
-      if (state.backend) {
+      if (isBackendMode()) {
+        if (!canUseBackend()) {
+          showFeedback('The backend is unavailable. The imported packet was not sent and no local cloud substitute was created.', 'error');
+          return;
+        }
         if (!state.connected) {
-          showFeedback('The simulated link is disconnected. The imported packet was not sent to the receiver.', 'error');
+          showFeedback('The backend station is disconnected. The imported packet was not sent to the receiver.', 'error');
           return;
         }
         sendBackendReading(data, 'Imported virtual packet');
@@ -758,7 +861,11 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   });
 
   $('linkToggle').addEventListener('click', () => {
-    if (state.backend) {
+    if (isBackendMode()) {
+      if (state.mode !== 'local' || !state.apiAvailable) {
+        refreshBackendState();
+        return;
+      }
       reliabilityAction(state.connected ? 'disconnect' : 'reconnect');
       return;
     }
@@ -792,12 +899,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     reliabilityAction('stale', reliabilityReading(latestSequence - 1));
   });
 
-  // Populate a useful first chart without pretending these are collected measurements.
-  for (let i=0;i<11;i++) state.history.push({m:29+Math.round(Math.sin(i*.6)*3),t:1.0+Math.abs(Math.sin(i*.4))*.5,v:10+Math.round(Math.abs(Math.cos(i*.5))*5)});
-  state.history.push({m:state.moisture,t:state.tilt,v:state.vibration});
-  const firstReading = currentReading();
-  state.received = {...firstReading,...localAssessment(),sequence:state.sequence,received_at:isoNow(),receivedAtMs:Date.now(),transport:'SIMULATED_LORA'};
-  pushLog('Simulator started',localAssessment(),'RECEIVED',firstReading);
+  if (state.mode === 'standalone') {
+    // Populate a useful first chart without pretending these are collected measurements.
+    for (let i=0;i<11;i++) state.history.push({m:29+Math.round(Math.sin(i*.6)*3),t:1.0+Math.abs(Math.sin(i*.4))*.5,v:10+Math.round(Math.abs(Math.cos(i*.5))*5)});
+    state.history.push({m:state.moisture,t:state.tilt,v:state.vibration});
+    const firstReading = currentReading();
+    state.received = {...firstReading,...localAssessment(),sequence:state.sequence,received_at:isoNow(),receivedAtMs:Date.now(),transport:'SIMULATED_LORA'};
+    pushLog('Simulator started',localAssessment(),'RECEIVED',firstReading);
+  }
   saveCurrentStation();
   renderLocal(); renderRemote(); renderChart();
   detectBackend();
