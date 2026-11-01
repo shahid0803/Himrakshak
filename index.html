@@ -274,8 +274,19 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       });
       let payload = null;
       try { payload = await response.json(); } catch (_) {}
-      if (!response.ok) throw new Error(payload?.error?.message || 'Local API request failed');
+      if (!response.ok) {
+        const error = new Error(payload?.error?.message || 'Local API request failed');
+        error.status = response.status;
+        throw error;
+      }
       return payload;
+    }
+
+  function backendErrorMessage(err, action) {
+      if (err.status === 401 || err.status === 403) {
+        return 'Remote administrative controls are unavailable in the browser. Read-only station data remains available.';
+      }
+      return action + ': ' + err.message;
     }
 
   function setBackendIndicator(backend) {
@@ -320,7 +331,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         showFeedback('Packet accepted by the local Python API.', 'success');
         return true;
       } catch (err) {
-        showFeedback('Local API rejected the packet: ' + err.message, 'error');
+        showFeedback(backendErrorMessage(err, 'Local API rejected the packet'), 'error');
         return false;
       }
     }
@@ -335,7 +346,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         if (generation === state.requestGeneration) loadStationDetail(detail);
         showFeedback('Scenario accepted by the local Python API.', 'success');
       } catch (err) {
-        showFeedback('Local API scenario failed: ' + err.message, 'error');
+        showFeedback(backendErrorMessage(err, 'Local API scenario failed'), 'error');
       }
     }
 
@@ -369,7 +380,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         const detail = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation));
         loadStationDetail(detail);
       } catch (err) {
-        showFeedback('Communication simulation failed: ' + err.message, 'error');
+        showFeedback(backendErrorMessage(err, 'Communication simulation failed'), 'error');
       }
     }
 

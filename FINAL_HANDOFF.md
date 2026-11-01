@@ -1,4 +1,4 @@
-# HIMRAKSHAK — FINAL PROJECT HANDOVER (PHASE 10)
+# HIMRAKSHAK — FINAL PROJECT HANDOVER (PHASE 11)
 
 ## 1. Project Overview
 
@@ -21,7 +21,7 @@
 - **Three-Station Roster (`himrakshak.stations`):** Complete isolation between `HR-01` (Station 1), `HR-02` (Station 2), and `HR-03` (Station 3), each maintaining independent sequence counters, scenarios, latest packets, and bounded 100-event history.
 - **Device Sequence Integrity:** External device sequences are preserved. Duplicate or out-of-order stale packets are rejected with HTTP 409 Conflict without altering accepted station state.
 
-### Security & Deployment Readiness (Phase 10)
+### Security & Deployment Readiness (Phase 11)
 - **Dual-Mode Host & Port Binding:**
   - *Local Mode (Default):* Binds strictly to `127.0.0.1:8765`. Explicitly rejects `--host 0.0.0.0` unless `--allow-remote` is set.
   - *Cloud Mode (`--allow-remote`):* Binds to `0.0.0.0` and resolves dynamic `$PORT` injected by hosting environments (default: 10000).
@@ -59,7 +59,7 @@ HimRakshak/
 ├── FINAL_HANDOFF.md                        # This project handover document
 ├── README.md                               # Project presentation and general documentation
 ├── index.html                              # Official single-page dashboard (standalone & API-ready)
-├── render.yaml                             # Render Web Service Blueprint (Phase 10)
+├── render.yaml                             # Render Web Service Blueprint (Phase 11)
 ├── requirements.txt                        # Standard-library-only declaration
 │
 ├── docs/
@@ -148,7 +148,7 @@ python -B -m unittest discover -s tests -v
 python -B -m unittest tests.test_demo_acceptance -v
 ```
 
-### Actual Verified Test Results (Phase 10 Handover)
+### Actual Verified Test Results (Phase 11 Handover)
 
 ```text
 Suite 1 (Comprehensive Tests):
@@ -200,15 +200,27 @@ Result: OK (1 passed, 0 failed, 0 errors)
 
 ## 9. Cloud Deployment Readiness and Remaining Steps
 
-### Completed Readiness Items (Phase 10)
+### Completed Readiness Items (Phase 11)
 - Configured dynamic `$PORT` and `0.0.0.0` binding.
 - Implemented `render.yaml` Blueprint specification.
 - Hardened public API with administrative authentication on mutation routes (`X-HimRakshak-Admin`).
 - Implemented rate limiting on sensor reading ingestion.
 - Preserved single-origin architecture eliminating CORS vulnerabilities.
+- Added exact manual Render Blueprint deployment steps and a post-deployment endpoint checklist.
+- Added clear browser feedback when protected remote administrative operations return HTTP 401 or 403.
+
+### Manual deployment step
+Apply the Blueprint from the Render dashboard:
+
+1. Choose **New → Blueprint** and connect `shahid0803/Himrakshak` on the `main` branch.
+2. Review the `himrakshak` service from the root `render.yaml` and keep the **Free** plan.
+3. Allow Render to generate `HIMRAKSHAK_ADMIN_KEY`, then apply the Blueprint.
+4. Wait for the deploy and health check to complete.
+5. Use the generated HTTPS service URL to run the endpoint checklist in [`docs/deployment.md`](docs/deployment.md).
+
+Do not record or invent a public URL in this repository; Render assigns it after deployment.
 
 ### Remaining Steps for Future Phases
-- **Phase 11:** Connect GitHub repository to Render and execute live cloud deployment. Verify public URL `https://<service-name>.onrender.com/`.
 - **Phase 12:** Implement `WiFi.h` and `HTTPClient.h` in `wokwi_esp32_demo/sketch.ino` targeting the cloud endpoint.
 - **Phase 13:** Validate end-to-end live ingestion from Wokwi to cloud backend to live dashboard.
 - **Phase 14:** Scale Wokwi virtual hardware across all three stations (`HR-01`, `HR-02`, `HR-03`).
@@ -220,4 +232,4 @@ Result: OK (1 passed, 0 failed, 0 errors)
 1. **No Physical LoRa Implemented:** The current system uses software-simulated sensor data and software-defined reliability queues. It does **not** communicate over physical LoRa frequencies (868/915/433 MHz) and does not contain physical SX1262 transceiver drivers.
 2. **Demonstration Geotechnical Model:** Risk scoring and alert thresholds are illustrative software models designed for academic presentation. They are **not** scientifically calibrated or certified for real-world life-critical geological slope monitoring.
 3. **Ephemeral Cloud Storage:** On free-tier cloud containers (Render), in-memory event history (100 events) and sequence counters reset when the container spins down after 15 minutes of inactivity.
-4. **No Active Cloud Deployment Yet:** The project is prepared for Render via `render.yaml`, but actual deployment will be executed in Phase 11.
+4. **Cloud URL is environment-specific:** The Blueprint is deployment-ready, but the live service URL and runtime state exist only after the repository owner applies it in Render.
