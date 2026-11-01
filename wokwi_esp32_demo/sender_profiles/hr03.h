@@ -1,0 +1,5 @@
+#pragma once
+
+#define HIMRAKSHAK_STATION_ID "HR-03"
+#define HIMRAKSHAK_SCENARIO "slope_shift"
+#define HIMRAKSHAK_USE_SCENARIO_PRESET 1

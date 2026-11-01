@@ -96,6 +96,10 @@ normalizes it with `validate_reading()`, recalculates risk with
 Incoming risk fields are ignored. Rejected packets do not replace `latest` or
 add an event.
 
+The public cloud ingestion route is a temporary academic demonstration
+endpoint. It does not authenticate device identity and must not receive
+secrets or sensitive data.
+
 ### `POST /api/simulate`
 
 Accepts one object such as `{"scenario":"heavy_rain"}`. Supported scenarios
@@ -158,5 +162,9 @@ Errors use:
 The service uses a bounded in-memory history of 100 accepted events and has no
 database or persistence. State is lost when the process stops. The server is
 local-only and has no authentication; do not bind it to a public interface.
-This remains a software demonstration with synthetic readings and illustrative
-thresholds, not a validated landslide prediction or field safety system.
+HTTP 409 sequence conflicts include `classification` (`duplicate` or `stale`),
+the submitted `sequence`, and the `latest_sequence` accepted by the station.
+Senders can use this metadata to reconcile delivery without bypassing backend
+checks. This remains a software demonstration with synthetic readings and
+illustrative thresholds, not a validated landslide prediction or field safety
+system.
