@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="theme-color" content="#101c2c" />
+<title>HimRakshak | Offline Early-Warning Prototype</title>
+<style>
+:root{--ink:#172333;--muted:#657286;--line:#dce3eb;--paper:#f3f6fa;--card:#fff;--navy:#101c2c;--blue:#246bfe;--green:#16865b;--yellow:#b97708;--red:#cf3e43;--soft-blue:#eaf1ff;--soft-green:#e5f6ee;--soft-yellow:#fff4d9;--soft-red:#ffebeb;--shadow:0 10px 30px rgba(27,44,68,.06)}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input{font:inherit}button{cursor:pointer}.app{max-width:1440px;margin:0 auto;min-height:100vh}.topbar{background:var(--navy);color:#fff;padding:18px clamp(16px,3vw,38px);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:13px;background:#24446c;display:grid;place-items:center;font-size:22px}.brand h1{font-size:20px;letter-spacing:-.4px;margin:0}.brand p{margin:2px 0 0;color:#b9c7d9;font-size:12px}.top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #36506d;color:#dbe7f8;border-radius:99px;padding:7px 11px;font-size:11px;font-weight:800;letter-spacing:.06em}.dot{width:7px;height:7px;border-radius:50%;background:#57d69a;box-shadow:0 0 0 3px #57d69a24}.download-btn{background:#fff;color:var(--navy);border:0;border-radius:9px;padding:9px 12px;font-weight:750}.main{padding:24px clamp(14px,3vw,38px) 36px}.intro{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}.eyebrow{text-transform:uppercase;color:var(--blue);font-size:10px;font-weight:850;letter-spacing:.14em}.intro h2{font-size:clamp(23px,3vw,31px);line-height:1.15;letter-spacing:-.8px;margin:6px 0}.intro p{margin:0;color:var(--muted);max-width:720px}.demo-label{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);padding:9px 12px;border-radius:10px;color:#596a80;font-size:12px;font-weight:750}.notice{display:flex;align-items:flex-start;gap:10px;border:1px solid #f0d293;background:#fff9e9;color:#684d17;padding:12px 14px;border-radius:12px;margin-bottom:18px;font-size:12px}.notice b{display:block;margin-bottom:2px}.notice-icon{font-size:18px}.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin-bottom:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow)}.kpi{padding:16px 17px;min-height:112px}.kpi-top{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px;font-weight:700}.kpi-icon{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#f0f3f8;font-size:15px}.kpi-number{font-weight:850;letter-spacing:-.7px;font-size:27px;margin-top:11px;line-height:1.05}.kpi-foot{margin-top:5px;color:var(--muted);font-size:11px}.layout{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(300px,.88fr);gap:16px;align-items:start}.stack{display:grid;gap:16px}.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:17px 18px 0}.card-head h3{margin:0;font-size:15px;letter-spacing:-.2px}.card-head p{margin:4px 0 0;color:var(--muted);font-size:12px}.tag{font-size:10px;font-weight:800;letter-spacing:.04em;border-radius:7px;padding:5px 8px;background:#eef2f7;color:#607087;white-space:nowrap}.body{padding:16px 18px 18px}.slope-stage{background:linear-gradient(180deg,#eff7fc 0%,#f8fafc 62%,#e9eff4 62%,#e9eff4 100%);border:1px solid #dce7ef;border-radius:12px;min-height:185px;position:relative;overflow:hidden;padding:12px}.stage-title{color:#678094;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;position:absolute;top:12px;left:14px}.slope-svg{display:block;width:100%;height:168px}.stage-badge{position:absolute;bottom:10px;right:10px;border:1px solid #d3dce6;background:#ffffffdd;backdrop-filter:blur(6px);padding:6px 8px;border-radius:8px;font-size:10px;font-weight:800;color:#53647a}.meters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.meter{border:1px solid var(--line);border-radius:11px;padding:11px 12px}.meter-label{font-size:11px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:6px}.meter-value{font-size:20px;font-weight:850;letter-spacing:-.5px;margin-top:7px}.meter-unit{font-size:11px;color:var(--muted);font-weight:600}.meter-track{height:5px;background:#edf1f6;border-radius:9px;margin-top:9px;overflow:hidden}.meter-fill{height:100%;border-radius:9px;background:var(--blue);width:20%;transition:width .25s,background .25s}.risk-overview{display:flex;gap:17px;align-items:center;margin:17px 0 7px}.score-ring{width:90px;height:90px;border-radius:50%;display:grid;place-items:center;flex-shrink:0;background:conic-gradient(var(--green) 0deg 0deg,#e9eef3 0deg 360deg);position:relative}.score-ring:before{content:"";position:absolute;inset:7px;border-radius:50%;background:white}.score-inner{position:relative;text-align:center}.score-number{font-size:23px;line-height:1;font-weight:900;letter-spacing:-1px}.score-caption{font-size:9px;color:var(--muted);margin-top:3px}.risk-title{font-size:21px;font-weight:900;letter-spacing:-.5px}.risk-copy{font-size:12px;color:var(--muted);margin-top:5px;max-width:420px}.risk-state{display:inline-flex;padding:5px 8px;border-radius:7px;font-size:10px;letter-spacing:.06em;font-weight:900;margin-top:8px}.risk-state.normal{background:var(--soft-green);color:var(--green)}.risk-state.warning{background:var(--soft-yellow);color:var(--yellow)}.risk-state.critical{background:var(--soft-red);color:var(--red)}.controls{display:grid;gap:17px}.control-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:7px}.control-row label{font-size:12px;font-weight:800}.control-reading{font-weight:800;font-size:12px;color:#334a66}.control-help{font-size:11px;color:var(--muted);grid-column:1/-1;margin-top:-5px}.slider{grid-column:1/-1;width:100%;accent-color:var(--blue)}.scenario-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:18px}.btn{border:1px solid var(--line);border-radius:9px;background:#fff;color:#34445b;padding:10px 11px;font-weight:800;font-size:12px;text-align:left;transition:.15s}.btn:hover{border-color:#9eb7de;transform:translateY(-1px)}.btn.primary{background:var(--blue);border-color:var(--blue);color:white}.btn.warm{background:#fff7e5;border-color:#f0d293;color:#795508}.btn.red{background:#fff0f0;border-color:#f2bfc1;color:#a62e34}.btn.full{grid-column:1/-1;text-align:center}.link-panel{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:11px;padding:12px;margin-top:13px}.link-left{display:flex;align-items:center;gap:10px}.link-symbol{width:36px;height:36px;border-radius:10px;background:var(--soft-green);color:var(--green);display:grid;place-items:center;font-size:17px}.link-title{font-weight:850;font-size:12px}.link-sub{font-size:10px;color:var(--muted);margin-top:3px}.toggle{border:0;border-radius:8px;background:#edf1f6;color:#465872;padding:8px 9px;font-size:10px;font-weight:850}.toggle.on{background:var(--soft-red);color:#a62e34}.chart-wrap{padding:8px 14px 12px}.chart-legend{display:flex;gap:16px;color:var(--muted);font-size:10px;font-weight:700;padding:4px 4px 8px}.legend-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.chart-svg{width:100%;height:170px;display:block;overflow:visible}.zones{display:grid;gap:8px;padding:15px 18px 18px}.zone{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:10px}.zone-dot{width:9px;height:9px;border-radius:50%;background:var(--green)}.zone-name{font-weight:800;font-size:12px}.zone-desc{font-size:10px;color:var(--muted);margin-top:3px}.zone-status{font-size:9px;font-weight:900;letter-spacing:.04em;color:var(--green);background:var(--soft-green);padding:5px 7px;border-radius:6px}.zone-status.warning{color:var(--yellow);background:var(--soft-yellow)}.zone-status.critical{color:var(--red);background:var(--soft-red)}.packet{background:#101c2c;border-radius:10px;color:#d7e7fc;padding:12px;overflow:auto;font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre;max-height:180px}.packet-import{display:grid;gap:8px;margin-top:12px}.packet-import label{font-size:11px;font-weight:800;color:#52647a}.packet-import textarea{width:100%;min-height:76px;border:1px solid var(--line);border-radius:9px;padding:10px;background:#fbfcfe;color:var(--ink);font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}.packet-import button{justify-self:start}.logs{width:100%;border-collapse:collapse;font-size:11px}.logs th{text-align:left;color:var(--muted);font-weight:800;padding:10px 7px;border-bottom:1px solid var(--line);font-size:9px;text-transform:uppercase;letter-spacing:.06em}.logs td{padding:10px 7px;border-bottom:1px solid #eef1f5;vertical-align:top}.logs tr:last-child td{border-bottom:0}.log-table{overflow:auto}.log-pill{border-radius:6px;padding:4px 6px;font-weight:900;font-size:9px}.log-pill.ok{color:var(--green);background:var(--soft-green)}.log-pill.warn{color:var(--yellow);background:var(--soft-yellow)}.log-pill.danger{color:var(--red);background:var(--soft-red)}.logs-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}.micro{font-size:10px;color:var(--muted)}.small-btn{border:1px solid var(--line);border-radius:8px;background:#fff;padding:7px 9px;color:#53647a;font-size:10px;font-weight:800}.footer{padding:18px 2px 0;color:#7b8797;font-size:10px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}.tooltip{font-size:10px;color:var(--muted);margin-top:10px}.muted{color:var(--muted)}
+
+/* Prototype polish + accessible feedback */
+.reason-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 1px}
+.reason-chip{display:inline-flex;align-items:center;border-radius:7px;padding:5px 7px;font-size:10px;font-weight:750;background:#f0f3f8;color:#506177;border:1px solid #e3e9f0}
+.reason-chip.warning{background:var(--soft-yellow);color:#795508;border-color:#f0d293}
+.reason-chip.critical{background:var(--soft-red);color:#a62e34;border-color:#f2bfc1}
+.risk-state.critical,.zone-status.critical{background:var(--soft-red);color:var(--red)}
+.risk-state.warning{background:var(--soft-yellow);color:var(--yellow)}
+.zone-status.normal{background:var(--soft-green);color:var(--green)}
+.meter-note{font-size:9px;color:var(--muted);margin-top:5px}
+.battery .meter-fill{background:var(--green)}
+.import-actions{display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+.feedback{border:1px solid var(--line);border-radius:9px;background:#f7f9fc;color:#42546b;padding:10px 11px;font-size:11px;line-height:1.5}
+.feedback.success{border-color:#b8e4ce;background:#effaf4;color:#17663a}
+.feedback.error{border-color:#f2bfc1;background:#fff0f0;color:#a62e34}
+.copy-packet{margin-top:8px}
+.chart-legend{flex-wrap:wrap}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #94baff;outline-offset:2px}
+
+@media(max-width:980px){.layout{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.kpis{gap:8px}.kpi{padding:12px;min-height:100px}.kpi-number{font-size:22px}.meters{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.meter{padding:8px}.meter-value{font-size:16px}.risk-overview{gap:12px}.score-ring{width:76px;height:76px}.risk-title{font-size:18px}.card-head{padding:14px 14px 0}.body{padding:14px}.topbar{align-items:flex-start}.brand h1{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="brand"><div class="logo">⛰</div><div><h1>HimRakshak</h1><p>Offline landslide early-warning · prototype console</p></div></div>
+  <div class="top-actions"><span class="pill"><span class="dot"></span> SOFTWARE SIMULATION</span><span class="pill" id="modePill">LOCAL / NO CLOUD</span></div>
+</header>
+<main class="main">
+  <section class="intro"><div><div class="eyebrow">Field intelligence console / demo 01</div><h2>Monitor the slope. Warn before the road is at risk.</h2><p>Explore simulated soil moisture, tilt and vibration signals. Trigger test scenarios and observe how a local risk engine and a simulated radio receiver respond.</p></div><div class="demo-label">◉ <span id="modeIndicator">Standalone browser mode · no API server</span></div></section>
+  <div class="notice"><div class="notice-icon">ⓘ</div><div><b>Prototype disclosure — not a real landslide detector</b>All values, radio packets, map zones and response times on this page are simulated. This file can run without internet, but it does not connect to physical sensors or transmit real LoRa signals.</div></div>
+  <section class="card station-bar"><div class="card-head"><div><h3>Virtual station roster</h3><p>Exactly three independent stations; select one to inspect its local state.</p></div><span class="tag">3 STATIONS</span></div><div class="body" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><label for="stationSelect" style="font-size:12px;font-weight:800">Active station</label><select id="stationSelect" class="small-btn"><option value="HR-01">HR-01 · Virtual Station 1</option><option value="HR-02">HR-02 · Virtual Station 2</option><option value="HR-03">HR-03 · Virtual Station 3</option></select><span class="micro" id="stationSummary">No events recorded for this station.</span></div></section>
+  <section class="kpis">
+    <article class="card kpi"><div class="kpi-top"><span id="nodeLabel">Sensor node · HR-01</span><span class="kpi-icon">⌁</span></div><div class="kpi-number" id="kpiRisk">NORMAL</div><div class="kpi-foot" id="kpiRiskFoot">Local simulated risk state</div></article>
+    <article class="card kpi"><div class="kpi-top"><span>Radio link</span><span class="kpi-icon">⌁</span></div><div class="kpi-number" id="kpiLink">CONNECTED</div><div class="kpi-foot" id="kpiLinkFoot">Simulated link · no actual RF</div></article>
+    <article class="card kpi"><div class="kpi-top"><span>Packets received</span><span class="kpi-icon">↔</span></div><div class="kpi-number" id="kpiPackets">001</div><div class="kpi-foot">Simulated packets delivered</div></article>
+    <article class="card kpi"><div class="kpi-top"><span>Receiver last seen</span><span class="kpi-icon">◷</span></div><div class="kpi-number" id="kpiSeen">Just now</div><div class="kpi-foot" id="kpiSeenFoot">Local browser clock</div></article>
+  </section>
+  <div class="layout">
+    <div class="stack">
+      <section class="card">
+        <div class="card-head"><div><h3>Live slope observation</h3><p>One virtual sensor node · S1 / Ramban demo zone</p></div><span class="tag" id="readStateTag">NORMAL</span></div>
+        <div class="body">
+          <div class="slope-stage"><span class="stage-title">Slope condition / schematic</span>
+            <svg class="slope-svg" viewBox="0 0 680 210" role="img" aria-label="Schematic slope visualization">
+              <defs><linearGradient id="ground" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#b5a17f"/><stop offset="1" stop-color="#80684e"/></linearGradient><linearGradient id="rain" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8dc5ef" stop-opacity=".7"/><stop offset="1" stop-color="#8dc5ef" stop-opacity="0"/></linearGradient></defs>
+              <g opacity=".65" stroke="#d2e2eb" stroke-width="1"><path d="M0 45H680M0 78H680M0 111H680M0 144H680"/></g>
+              <path id="slopeFill" d="M5 185 L78 161 L157 120 L240 130 L320 86 L405 100 L491 132 L572 145 L675 181 L675 210 L5 210Z" fill="url(#ground)"/>
+              <path d="M5 185 L78 161 L157 120 L240 130 L320 86 L405 100 L491 132 L572 145 L675 181" fill="none" stroke="#667b51" stroke-width="5" stroke-linecap="round"/>
+              <g id="rainDrops" opacity="0"><path d="M195 36l-7 15M225 25l-7 15M255 38l-7 15M285 23l-7 15M315 39l-7 15M345 27l-7 15M375 40l-7 15M405 24l-7 15M435 37l-7 15" stroke="#4f9bcc" stroke-width="3" stroke-linecap="round"/></g>
+              <g id="sensors" transform="translate(325 93) rotate(0)"><rect x="-10" y="-20" width="20" height="34" rx="4" fill="#173d6a" stroke="#fff" stroke-width="2"/><circle cx="0" cy="-10" r="3" fill="#57d69a"/><path d="M0 14V46" stroke="#173d6a" stroke-width="4"/><path d="M-14 46H14" stroke="#173d6a" stroke-width="3"/><path d="M10 -18l18 -8" stroke="#173d6a" stroke-width="2"/><text x="32" y="-27" font-size="10" font-weight="800" fill="#27486b">S1 sensor</text></g>
+              <path d="M40 191 Q130 181 180 171 T310 152 T430 162 T650 192" fill="none" stroke="#d5c49c" stroke-width="2" stroke-dasharray="5 5"/>
+              <g transform="translate(550 104)"><path d="M0 52V10M-14 25L0 9L14 25" stroke="#62768a" fill="none" stroke-width="3" stroke-linecap="round"/><text x="0" y="70" text-anchor="middle" font-size="10" fill="#5f7287" font-weight="700">MOVEMENT</text></g>
+              <g transform="translate(75 123)"><path d="M0 40V4M-12 16L0 3L12 16" stroke="#62768a" fill="none" stroke-width="3" stroke-linecap="round"/><text x="0" y="58" text-anchor="middle" font-size="10" fill="#5f7287" font-weight="700">SLOPE</text></g>
+            </svg><span class="stage-badge" id="slopeBadge">● STABLE BASELINE</span>
+          </div>
+          <div class="meters">
+            <div class="meter"><div class="meter-label">💧 Moisture</div><div class="meter-value"><span id="moistureVal">32</span><span class="meter-unit"> / 100</span></div><div class="meter-track"><div class="meter-fill" id="moistureFill"></div></div></div>
+            <div class="meter"><div class="meter-label">⌁ Tilt change</div><div class="meter-value"><span id="tiltVal">1.2</span><span class="meter-unit">°</span></div><div class="meter-track"><div class="meter-fill" id="tiltFill"></div></div></div>
+            <div class="meter"><div class="meter-label">〰 Vibration</div><div class="meter-value"><span id="vibrationVal">12</span><span class="meter-unit"> / 100</span></div><div class="meter-track"><div class="meter-fill" id="vibrationFill"></div></div></div>
+            <div class="meter battery"><div class="meter-label">▰ Battery</div><div class="meter-value"><span id="batteryVal">82</span><span class="meter-unit">%</span></div><div class="meter-track"><div class="meter-fill" id="batteryFill"></div></div><div class="meter-note">Simulated estimate</div></div>
+          </div>
+          <div class="risk-overview"><div class="score-ring" id="scoreRing"><div class="score-inner"><div class="score-number" id="scoreVal">6</div><div class="score-caption">DEMO SCORE</div></div></div><div><div class="risk-title" id="riskTitle">Conditions look stable</div><div class="risk-copy" id="riskCopy">Measurements remain within the baseline used for this software demonstration.</div><div class="reason-list" id="riskReasons" aria-live="polite"></div><span class="risk-state normal" id="riskState">NORMAL</span></div></div>
+          <div class="tooltip">Risk score is an illustrative rule-based demo, not a calibrated probability or a validated landslide prediction.</div>
+        </div>
+      </section>
+      <section class="card"><div class="card-head"><div><h3>Recent simulated telemetry</h3><p>Values update when you change a sensor or run a scenario.</p></div><span class="tag">LAST 20 SAMPLES</span></div><div class="chart-wrap"><div class="chart-legend"><span><i class="legend-dot" style="background:#246bfe"></i>Moisture</span><span><i class="legend-dot" style="background:#e39b26"></i>Tilt × 8 (visual scale)</span><span><i class="legend-dot" style="background:#9467d8"></i>Vibration</span></div><svg class="chart-svg" viewBox="0 0 640 180" preserveAspectRatio="none" id="chartSvg" aria-label="Simulated telemetry line chart"></svg></div></section>
+      <section class="card"><div class="card-head"><div><h3>Event history</h3><p>Local browser log · export as CSV for your report.</p></div><button class="small-btn" id="exportBtn">↓ Export CSV</button></div><div class="body"><div class="log-table"><table class="logs"><thead><tr><th>Time</th><th>Event</th><th>Risk</th><th>Link</th></tr></thead><tbody id="logRows"></tbody></table></div><div class="logs-footer"><span class="micro" id="logCount">0 logged events</span><button class="small-btn" id="clearLogBtn">Clear log</button></div></div></section>
+    </div>
+    <div class="stack">
+      <section class="card"><div class="card-head"><div><h3>Scenario controls</h3><p>Move the virtual sensor readings to test the warning logic.</p></div><span class="tag">INTERACTIVE</span></div><div class="body"><div class="controls">
+        <div class="control-row"><label for="moistureSlider">Soil moisture</label><span class="control-reading"><span id="moistureControl">32</span> / 100</span><input id="moistureSlider" class="slider" type="range" min="0" max="100" value="32"/><span class="control-help">Raise moisture to simulate rainfall soaking the slope.</span></div>
+        <div class="control-row"><label for="tiltSlider">Tilt / displacement signal</label><span class="control-reading"><span id="tiltControl">1.2</span>°</span><input id="tiltSlider" class="slider" type="range" min="0" max="15" step="0.1" value="1.2"/><span class="control-help">This is a simplified tilt-change signal, not physical displacement in centimetres.</span></div>
+        <div class="control-row"><label for="vibrationSlider">Vibration anomaly</label><span class="control-reading"><span id="vibrationControl">12</span> / 100</span><input id="vibrationSlider" class="slider" type="range" min="0" max="100" value="12"/><span class="control-help">Increase to simulate unusual vibration activity.</span></div>
+      </div>
+      <div class="scenario-grid"><button class="btn warm" id="rainBtn">☂ Simulate heavy rain</button><button class="btn red" id="tiltBtn">↗ Simulate slope shift</button><button class="btn" id="vibrationBtn">〰 Vibration burst</button><button class="btn" id="normalBtn">↺ Reset to baseline</button><button class="btn full" id="packetBtn">Send simulated packet now →</button></div>
+      <div class="link-panel"><div class="link-left"><div class="link-symbol" id="linkSymbol">↔</div><div><div class="link-title" id="linkTitle">Simulated radio connected</div><div class="link-sub" id="linkSub">Receiver is getting sensor packets</div></div></div><button class="toggle" id="linkToggle">Disconnect</button></div>
+      <p class="tooltip">Try disconnecting the link, then changing a slider. Slider changes update the local node; a packet is sent on release only when the link is connected. The receiver keeps its last accepted packet while disconnected.</p>
+      <div class="link-panel" style="margin-top:12px;display:block"><div class="link-title">Simulated communication faults</div><div class="link-sub" id="reliabilitySummary">Backend-only drop, delay, duplicate, stale, and queue controls.</div><div class="scenario-grid" style="margin-top:10px"><button class="small-btn" id="dropPacketBtn">Drop packet</button><button class="small-btn" id="delayPacketBtn">Delay packet</button><button class="small-btn" id="releasePacketBtn">Release next</button><button class="small-btn" id="duplicatePacketBtn">Duplicate test</button><button class="small-btn" id="stalePacketBtn">Stale test</button></div></div>
+      </div></section>
+      <section class="card"><div class="card-head"><div><h3>Receiver station</h3><p>What the simulated receiver last accepted.</p></div><span class="tag" id="receiverTag">LIVE</span></div><div class="body"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px"><div><div class="muted" style="font-size:11px;font-weight:750">LAST RECEIVED RISK</div><div id="remoteRisk" style="font-size:23px;font-weight:900;margin-top:3px">NORMAL</div></div><div style="text-align:right"><div class="muted" style="font-size:11px;font-weight:750">PACKET SEQUENCE</div><div id="packetSeq" style="font-size:23px;font-weight:900;margin-top:3px">0001</div></div></div><pre class="packet" id="packetJson">{
+  "node_id": "HR-01",
+  "sequence": 1,
+  "soil_moisture_pct": 32,
+  "tilt_deg": 1.2,
+  "vibration_level": 12,
+  "battery_pct": 82,
+  "risk": "NORMAL",
+  "transport": "SIMULATED_LORA"
+}</pre><button class="small-btn copy-packet" id="copyPacketBtn" type="button">Copy latest JSON</button><div class="tooltip">This packet is generated in the browser; it is not transmitted over a physical radio.</div><div class="packet-import"><label for="manualPacketInput">Optional: import one JSON line from Wokwi Serial Monitor</label><textarea id="manualPacketInput" spellcheck="false" placeholder='{"node_id":"HR-01","sequence":2,"soil_moisture_pct":70,"tilt_deg":5.5,"vibration_level":85,"battery_pct":82,"transport":"WOKWI_SOFTWARE_SIMULATION"}'></textarea><div class="import-actions"><button class="small-btn" id="loadPacketBtn" type="button">Import virtual ESP32 packet →</button><span class="micro">Manual copy/paste only; this does not create a live connection between Wokwi and this page.</span></div><div class="feedback" id="feedback" role="status" aria-live="polite" hidden></div></div></div></section>
+      <section class="card"><div class="card-head"><div><h3>Monitoring station overview</h3><p>Each virtual station keeps its own scenario, sequence, receiver state, and history.</p></div><span class="tag">SCHEMATIC</span></div><div class="zones" id="zones"><div class="zone"><span class="zone-dot"></span><div><div class="zone-name">HR-01 · Virtual Station 1</div><div class="zone-desc">No data yet</div></div><span class="zone-status">NO DATA</span></div><div class="zone"><span class="zone-dot"></span><div><div class="zone-name">HR-02 · Virtual Station 2</div><div class="zone-desc">No data yet</div></div><span class="zone-status">NO DATA</span></div><div class="zone"><span class="zone-dot"></span><div><div class="zone-name">HR-03 · Virtual Station 3</div><div class="zone-desc">No data yet</div></div><span class="zone-status">NO DATA</span></div></div></section>
+    </div>
+  </div>
+  <footer class="footer"><span>HimRakshak · zero-budget software demonstration</span><span>For hackathon prototyping only · field deployment requires validation</span></footer>
+</main>
+</div>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+  const state = {
+    nodeId: 'HR-01', moisture: 32, tilt: 1.2, vibration: 12, battery: 82,
+    connected: true, sequence: 1, packets: 1, received: null,
+    history: [], logs: [], lastReceivedAt: Date.now(),
+    backend: false, requestGeneration: 0, currentStation: 'HR-01',
+    stations: {}, stationOverview: []
+  };
+  const stationLabels = {'HR-01':'Virtual Station 1','HR-02':'Virtual Station 2','HR-03':'Virtual Station 3'};
+  const stationIds = Object.keys(stationLabels);
+  const ensureStation = id => {
+    if (!state.stations[id]) state.stations[id] = {
+      nodeId:id, moisture:32, tilt:1.2, vibration:12, battery:82,
+      connected:true, sequence:1, packets:1, received:null, history:[], logs:[],
+      lastReceivedAt:Date.now()
+    };
+    return state.stations[id];
+  };
+  const saveCurrentStation = () => {
+    const target = ensureStation(state.currentStation);
+    ['nodeId','moisture','tilt','vibration','battery','connected','sequence','packets',
+      'received','history','logs','lastReceivedAt'].forEach(key => { target[key] = state[key]; });
+  };
+  const restoreStation = id => {
+    const source = ensureStation(id);
+    state.currentStation = id;
+    ['nodeId','moisture','tilt','vibration','battery','connected','sequence','packets',
+      'received','history','logs','lastReceivedAt'].forEach(key => { state[key] = source[key]; });
+  };
+  ensureStation('HR-01');
+
+  const nowText = () => new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  const isoNow = () => new Date().toISOString();
+  const colorFor = level => level === 'CRITICAL' ? 'var(--red)' : level === 'WARNING' ? 'var(--yellow)' : 'var(--green)';
+  const classFor = level => level === 'CRITICAL' ? 'critical' : level === 'WARNING' ? 'warning' : 'normal';
+  const uiAssessment = assessment => {
+    const level = assessment.risk_level ?? assessment.level;
+    const score = assessment.demo_score ?? assessment.score;
+    return {
+      score, level, reasons: assessment.reasons || [],
+      title: level === 'CRITICAL' ? 'Critical test pattern detected' : level === 'WARNING' ? 'Anomaly scenario detected' : 'Conditions look stable',
+      copy: level === 'CRITICAL' ? 'The demo rules detected a severe tilt signal or a combination of elevated simulated signals.' : level === 'WARNING' ? 'One or more simulated signals crossed a demonstration warning rule; review the readings and trend.' : 'The simulated signals remain below the demonstration warning rules.'
+    };
+  };
+
+  // Demonstration-only rule engine. These thresholds are not field-calibrated.
+  function evaluate(m, t, v) {
+    const score = clamp(Math.round(Math.max(0, (m - 45) / 55) * 35 + Math.max(0, (t - 2) / 10) * 45 + Math.max(0, (v - 25) / 75) * 20), 0, 100);
+    const reasons = [];
+    if (m >= 60) reasons.push('Elevated simulated moisture');
+    if (t >= 4) reasons.push('Elevated simulated tilt');
+    if (v >= 65) reasons.push('Elevated simulated vibration');
+    if (score >= 25) reasons.push('Demonstration score reached the warning threshold');
+    let level = 'NORMAL';
+    let title = 'Conditions look stable';
+    let copy = 'The simulated signals remain below the demonstration warning rules.';
+    if (t >= 8 || (m >= 75 && t >= 4) || score >= 55) {
+      level = 'CRITICAL';
+      title = 'Critical test pattern detected';
+      copy = 'The demo rules detected a severe tilt signal or a combination of elevated simulated signals.';
+      if (t >= 8) reasons.push('Tilt reached the critical demonstration threshold');
+      if (m >= 75 && t >= 4) reasons.push('Combined moisture and tilt met the critical demonstration rule');
+      if (score >= 55) reasons.push('Demonstration score reached the critical threshold');
+    } else if (m >= 60 || t >= 4 || v >= 65 || score >= 25) {
+      level = 'WARNING';
+      title = 'Anomaly scenario detected';
+      copy = 'One or more simulated signals crossed a demonstration warning rule; review the readings and trend.';
+    }
+    return { score, level, title, copy, reasons };
+  }
+
+  const localAssessment = () => evaluate(state.moisture, state.tilt, state.vibration);
+  const currentReading = () => ({
+    node_id: state.nodeId,
+    timestamp: isoNow(),
+    soil_moisture_pct: state.moisture,
+    tilt_deg: state.tilt,
+    vibration_level: state.vibration,
+    battery_pct: state.battery
+  });
+
+  function showFeedback(message, kind = 'success') {
+    const el = $('feedback');
+    if (!el) return;
+    el.textContent = message;
+    el.className = 'feedback ' + kind;
+    el.hidden = false;
+  }
+
+  function pushLog(event, assessment, link, reading = currentReading()) {
+    assessment = uiAssessment(assessment);
+    state.logs.unshift({
+      time: nowText(), event, node_id: reading.node_id || state.nodeId,
+      moisture: reading.soil_moisture_pct ?? reading.moisture ?? state.moisture,
+      tilt: reading.tilt_deg ?? reading.tilt ?? state.tilt,
+      vibration: reading.vibration_level ?? reading.vibration ?? state.vibration,
+      battery: reading.battery_pct ?? state.battery,
+      risk: assessment.level, score: assessment.score, link
+    });
+    state.logs = state.logs.slice(0, 50);
+    renderLogs();
+  }
+
+  function pushHistory() {
+    state.history.push({m:state.moisture, t:state.tilt, v:state.vibration});
+    state.history = state.history.slice(-20);
+    renderChart();
+  }
+
+  function sendPacket(event = 'Telemetry update') {
+    if (!state.connected) {
+      pushLog(event + ' · packet blocked', localAssessment(), 'NO LINK');
+      showFeedback('The simulated link is disconnected. Local readings changed, but the receiver did not receive a packet.', 'error');
+      renderLocal();
+      return false;
+    }
+    if (state.backend) {
+      return sendBackendReading({
+        ...currentReading(),
+        sequence: state.sequence + 1,
+        transport: 'PYTHON_SIMULATOR'
+      }, event);
+    }
+    state.sequence += 1;
+    state.packets += 1;
+    const reading = currentReading();
+    const assessment = evaluate(state.moisture, state.tilt, state.vibration);
+    state.received = {
+      ...reading, ...assessment, sequence: state.sequence,
+      received_at: isoNow(), receivedAtMs: Date.now(), transport: 'SIMULATED_LORA'
+    };
+    state.lastReceivedAt = Date.now();
+    pushLog(event, assessment, 'RECEIVED', reading);
+    renderLocal();
+    renderRemote();
+    showFeedback('Simulated packet received by the browser demo.', 'success');
+    return true;
+  }
+
+  function updateValues(m, t, v, record = false) {
+    state.moisture = clamp(Math.round(Number(m)), 0, 100);
+    state.tilt = clamp(Math.round(Number(t) * 10) / 10, 0, 15);
+    state.vibration = clamp(Math.round(Number(v)), 0, 100);
+    $('moistureSlider').value = state.moisture;
+    $('tiltSlider').value = state.tilt;
+    $('vibrationSlider').value = state.vibration;
+    renderLocal();
+    if (record) pushHistory();
+  }
+
+  function setValues(m, t, v, eventName) {
+    updateValues(m, t, v, true);
+    if (state.connected) sendPacket(eventName || 'Sensor values changed');
+    else {
+      pushLog((eventName || 'Sensor values changed') + ' · local only', localAssessment(), 'NO LINK');
+      showFeedback('Local sensor state updated; no packet was received because the simulated link is disconnected.', 'error');
+    }
+  }
+
+  async function backendRequest(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: {'Content-Type': 'application/json', ...(options.headers || {})}
+      });
+      let payload = null;
+      try { payload = await response.json(); } catch (_) {}
+      if (!response.ok) throw new Error(payload?.error?.message || 'Local API request failed');
+      return payload;
+    }
+
+  function setBackendIndicator(backend) {
+      state.backend = backend;
+        $('modeIndicator').textContent = backend
+          ? 'Connected backend mode · local Python API'
+          : window.location.protocol === 'file:'
+            ? 'Standalone browser mode · no API server'
+            : 'Static hosted demo · Python API unavailable';
+    }
+
+  function applyBackendResult(result, eventName = 'Backend telemetry update') {
+      const reading = result.reading;
+      const assessment = result.assessment;
+      const ui = uiAssessment(assessment);
+      state.nodeId = reading.node_id;
+      state.battery = reading.battery_pct;
+      state.sequence = reading.sequence;
+      state.packets = Math.max(state.packets, reading.sequence + 1);
+      updateValues(reading.soil_moisture_pct, reading.tilt_deg, reading.vibration_level, true);
+      state.received = {...reading, ...ui, receivedAtMs: Date.now(), backendAssessment: assessment};
+      state.lastReceivedAt = Date.now();
+      pushLog(eventName, assessment, 'RECEIVED', reading);
+      renderLocal();
+      renderRemote();
+      renderChart();
+      const summary = state.stationOverview.find(item => item.node_id === state.currentStation);
+      if (summary) {
+        summary.latest = {reading, assessment};
+        summary.next_sequence = reading.sequence + 1;
+        summary.event_count = (summary.event_count || 0) + 1;
+      }
+      renderStations();
+    }
+
+  async function sendBackendReading(reading, eventName) {
+      const generation = ++state.requestGeneration;
+      try {
+        const result = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation) + '/readings', {method: 'POST', body: JSON.stringify(reading)});
+        if (generation !== state.requestGeneration) return false;
+        applyBackendResult(result, eventName);
+        showFeedback('Packet accepted by the local Python API.', 'success');
+        return true;
+      } catch (err) {
+        showFeedback('Local API rejected the packet: ' + err.message, 'error');
+        return false;
+      }
+    }
+
+  async function simulateBackend(scenario, eventName) {
+      const generation = ++state.requestGeneration;
+      try {
+        const result = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation) + '/simulate', {method: 'POST', body: JSON.stringify({scenario})});
+        if (generation !== state.requestGeneration) return;
+        applyBackendResult(result, eventName);
+        const detail = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation));
+        if (generation === state.requestGeneration) loadStationDetail(detail);
+        showFeedback('Scenario accepted by the local Python API.', 'success');
+      } catch (err) {
+        showFeedback('Local API scenario failed: ' + err.message, 'error');
+      }
+    }
+
+    function reliabilityReading(sequence) {
+      const reading = state.received || currentReading();
+      return {
+        node_id: state.currentStation,
+        sequence: sequence == null ? Number(reading.sequence || 0) : sequence,
+        timestamp: reading.timestamp || reading.received_at || isoNow(),
+        soil_moisture_pct: Number(reading.soil_moisture_pct ?? reading.moisture ?? state.moisture),
+        tilt_deg: Number(reading.tilt_deg ?? reading.tilt ?? state.tilt),
+        vibration_level: Number(reading.vibration_level ?? reading.vibration ?? state.vibration),
+        battery_pct: Number(reading.battery_pct ?? reading.battery ?? state.battery),
+        transport: reading.transport || 'PYTHON_SIMULATOR'
+      };
+    }
+
+    async function reliabilityAction(action, reading) {
+      if (!state.backend) {
+        showFeedback('Communication fault controls require the local Python API; standalone mode remains available.', 'error');
+        return;
+      }
+      try {
+        const result = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation) + '/faults/' + action, {
+          method: 'POST', body: JSON.stringify(reading || {})
+        });
+        if (result.communication) {
+          $('reliabilitySummary').textContent = `Simulated link ${result.communication.connection_state}; pending ${result.communication.pending_packets}; delivered ${result.communication.packets_delivered}; dropped ${result.communication.packets_dropped}.`;
+        }
+        showFeedback('Simulated communication outcome: ' + result.outcome + '.', result.outcome === 'delivered' || result.outcome === 'reconnected' ? 'success' : 'error');
+        const detail = await backendRequest('/api/stations/' + encodeURIComponent(state.currentStation));
+        loadStationDetail(detail);
+      } catch (err) {
+        showFeedback('Communication simulation failed: ' + err.message, 'error');
+      }
+    }
+
+  function loadBackendState(data) {
+      if (data.events) {
+        state.logs = data.events.slice().reverse().map(event => {
+          const reading = event.reading, assessment = uiAssessment(event.assessment);
+          return {
+            time: new Date(reading.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'}),
+            event: 'Backend accepted reading', node_id: reading.node_id,
+            moisture: reading.soil_moisture_pct, tilt: reading.tilt_deg,
+            vibration: reading.vibration_level, battery: reading.battery_pct,
+            risk: assessment.level, score: assessment.score, link: 'RECEIVED'
+          };
+        }).slice(0, 50);
+      }
+      if (data.latest) {
+        const latest = data.latest;
+        state.received = {...latest.reading, ...uiAssessment(latest.assessment), receivedAtMs: Date.now()};
+        state.nodeId = latest.reading.node_id;
+        state.battery = latest.reading.battery_pct;
+        state.sequence = latest.reading.sequence;
+        state.packets = latest.reading.sequence + 1;
+        updateValues(latest.reading.soil_moisture_pct, latest.reading.tilt_deg, latest.reading.vibration_level, false);
+      }
+      renderLogs(); renderLocal(); renderRemote(); renderChart();
+    }
+
+  function loadStationDetail(data) {
+      const station = data.station || data;
+      const latest = station.latest;
+      const target = ensureStation(station.node_id || state.currentStation);
+      target.nodeId = station.node_id || state.currentStation;
+      target.connected = station.receiver_connected !== false;
+      target.sequence = station.next_sequence || 0;
+      target.packets = latest ? latest.reading.sequence + 1 : 0;
+      if (!latest) {
+        target.received = null;
+        target.logs = [];
+        target.history = [];
+      }
+      target.logs = (station.events || []).slice().reverse().map(event => {
+        const reading = event.reading, assessment = uiAssessment(event.assessment);
+        return {time:new Date(event.timestamp || reading.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'}), event:event.event || 'Backend accepted reading', node_id:reading.node_id, moisture:reading.soil_moisture_pct, tilt:reading.tilt_deg, vibration:reading.vibration_level, battery:reading.battery_pct, risk:assessment.level, score:assessment.score, link:'RECEIVED'};
+      }).slice(0, 50);
+      if (latest) {
+        target.received = {...latest.reading, ...uiAssessment(latest.assessment), receivedAtMs:Date.now(), backendAssessment:latest.assessment};
+        target.moisture = latest.reading.soil_moisture_pct; target.tilt = latest.reading.tilt_deg;
+        target.vibration = latest.reading.vibration_level; target.battery = latest.reading.battery_pct;
+        target.lastReceivedAt = Date.now();
+      }
+      state.stationOverview = state.stationOverview.map(item => item.node_id === station.node_id ? {...item, scenario:station.scenario, next_sequence:station.next_sequence, latest:station.latest, event_count:station.event_count, receiver_connected:station.receiver_connected, communication:station.communication} : item);
+      if (station.communication) {
+        $('reliabilitySummary').textContent = `Simulated link ${station.communication.connection_state}; pending ${station.communication.pending_packets}; delivered ${station.communication.packets_delivered}; dropped ${station.communication.packets_dropped}.`;
+      }
+      restoreStation(state.currentStation);
+      renderLogs(); renderLocal(); renderRemote(); renderChart(); renderStations();
+    }
+
+  async function switchStation(id) {
+      if (!stationLabels[id] || id === state.currentStation) return;
+      saveCurrentStation();
+      restoreStation(id);
+      $('stationSelect').value = id;
+      if (state.backend) {
+        try { loadStationDetail(await backendRequest('/api/stations/' + encodeURIComponent(id))); }
+        catch (err) { showFeedback('Could not load station: ' + err.message, 'error'); }
+      } else {
+        renderLogs(); renderLocal(); renderRemote(); renderChart(); renderStations();
+      }
+    }
+
+  function renderStations() {
+      const summaries = state.stationOverview.length ? state.stationOverview : stationIds.map(id => {
+        const item = ensureStation(id);
+        return {node_id:id, label:stationLabels[id], latest:item.received ? {reading:item.received, assessment:item.received.backendAssessment || localAssessment()} : null, event_count:item.logs.length, scenario:'normal', next_sequence:item.sequence};
+      });
+      const zones = $('zones');
+      if (!zones) return;
+      zones.innerHTML = summaries.map(summary => {
+        const latest = summary.latest, assessment = latest ? uiAssessment(latest.assessment || latest) : null;
+        const level = assessment ? assessment.level : 'NO DATA';
+        const klass = level === 'NO DATA' ? '' : classFor(level);
+        return `<div class="zone"><span class="zone-dot" style="background:${assessment ? colorFor(level) : '#9aa7b6'}"></span><div><div class="zone-name">${escapeHtml(summary.node_id)} · ${escapeHtml(summary.label || stationLabels[summary.node_id])}</div><div class="zone-desc">${escapeHtml(summary.scenario || 'normal')} · ${summary.event_count || 0} events</div></div><span class="zone-status ${klass}">${level}</span></div>`;
+      }).join('');
+      const current = summaries.find(item => item.node_id === state.currentStation);
+      const communication = current && current.communication;
+      $('stationSummary').textContent = `${state.currentStation} · ${stationLabels[state.currentStation]} · ${ensureStation(state.currentStation).logs.length} events` + (communication ? ` · ${communication.connection_state}` : '');
+    }
+
+  async function detectBackend() {
+      if (window.location.protocol === 'file:') {
+        setBackendIndicator(false);
+        return;
+      }
+      try {
+        await backendRequest('/api/health');
+        setBackendIndicator(true);
+        const overview = await backendRequest('/api/stations');
+        state.stationOverview = overview.stations || [];
+        loadStationDetail(await backendRequest('/api/stations/' + state.currentStation));
+        showFeedback('Connected to the local Python API.', 'success');
+      } catch (_) {
+        setBackendIndicator(false);
+      }
+    }
+  renderLocal();
+
+  function renderLocal() {
+    const r = state.backend && state.received?.backendAssessment
+      ? uiAssessment(state.received.backendAssessment)
+      : localAssessment();
+    $('nodeLabel').textContent = 'Sensor node · ' + state.nodeId;
+    $('moistureVal').textContent = state.moisture;
+    $('tiltVal').textContent = state.tilt.toFixed(1);
+    $('vibrationVal').textContent = state.vibration;
+    $('batteryVal').textContent = state.battery;
+    $('moistureControl').textContent = state.moisture;
+    $('tiltControl').textContent = state.tilt.toFixed(1);
+    $('vibrationControl').textContent = state.vibration;
+    $('moistureFill').style.width = state.moisture + '%';
+    $('tiltFill').style.width = (state.tilt / 15 * 100) + '%';
+    $('vibrationFill').style.width = state.vibration + '%';
+    $('batteryFill').style.width = state.battery + '%';
+    $('moistureFill').style.background = state.moisture >= 75 ? 'var(--red)' : state.moisture >= 60 ? 'var(--yellow)' : 'var(--blue)';
+    $('tiltFill').style.background = state.tilt >= 8 ? 'var(--red)' : state.tilt >= 4 ? 'var(--yellow)' : 'var(--blue)';
+    $('vibrationFill').style.background = state.vibration >= 65 ? 'var(--red)' : state.vibration >= 45 ? 'var(--yellow)' : 'var(--blue)';
+    $('batteryFill').style.background = state.battery <= 20 ? 'var(--red)' : state.battery <= 40 ? 'var(--yellow)' : 'var(--green)';
+
+    $('kpiRisk').textContent = r.level;
+    $('kpiRisk').style.color = colorFor(r.level);
+    $('kpiRiskFoot').textContent = 'Local simulated risk state';
+    $('readStateTag').textContent = r.level;
+    $('readStateTag').style.color = colorFor(r.level);
+    $('readStateTag').style.background = r.level === 'CRITICAL' ? 'var(--soft-red)' : r.level === 'WARNING' ? 'var(--soft-yellow)' : 'var(--soft-green)';
+    $('scoreVal').textContent = r.score;
+    $('scoreRing').style.background = `conic-gradient(${colorFor(r.level)} ${r.score * 3.6}deg,#e9eef3 ${r.score * 3.6}deg 360deg)`;
+    $('riskTitle').textContent = r.title;
+    $('riskCopy').textContent = r.copy;
+    $('riskState').textContent = r.level;
+    $('riskState').className = 'risk-state ' + classFor(r.level);
+    $('riskReasons').replaceChildren();
+    (r.reasons.length ? r.reasons : ['No demo rule crossed']).forEach(reason => {
+      const chip = document.createElement('span');
+      chip.className = 'reason-chip ' + (r.level === 'CRITICAL' ? 'critical' : r.level === 'WARNING' ? 'warning' : '');
+      chip.textContent = reason;
+      $('riskReasons').appendChild(chip);
+    });
+    $('slopeBadge').textContent = r.level === 'CRITICAL' ? '● CRITICAL TEST PATTERN' : r.level === 'WARNING' ? '● ANOMALY / REVIEW' : '● STABLE BASELINE';
+    $('slopeBadge').style.color = colorFor(r.level);
+    $('sensors').setAttribute('transform', `translate(325 93) rotate(${Math.min(15, state.tilt) * 1.5})`);
+    $('rainDrops').setAttribute('opacity', state.moisture >= 60 ? '1' : '0');
+    $('kpiPackets').textContent = String(state.packets).padStart(3, '0');
+    $('kpiLink').textContent = state.connected ? 'CONNECTED' : 'LOST LINK';
+    $('kpiLink').style.color = state.connected ? 'var(--green)' : 'var(--red)';
+    $('kpiLinkFoot').textContent = state.connected ? 'Simulated link · no actual RF' : 'No new simulated packets delivered';
+    $('linkTitle').textContent = state.connected ? 'Simulated radio connected' : 'Simulated radio disconnected';
+    $('linkSub').textContent = state.connected ? 'Packets can be sent in this browser demo' : 'Local node changes; receiver data is frozen';
+    $('linkSymbol').style.background = state.connected ? 'var(--soft-green)' : 'var(--soft-red)';
+    $('linkSymbol').style.color = state.connected ? 'var(--green)' : 'var(--red)';
+    $('linkToggle').textContent = state.connected ? 'Disconnect' : 'Reconnect';
+    $('linkToggle').className = 'toggle ' + (state.connected ? '' : 'on');
+    saveCurrentStation();
+    renderStations();
+  }
+
+  function renderRemote() {
+    const r = state.received;
+    if (!r) {
+      $('remoteRisk').textContent = 'NO DATA';
+      $('remoteRisk').style.color = 'var(--muted)';
+      $('packetSeq').textContent = '----';
+      $('receiverTag').textContent = 'NO DATA';
+      $('receiverTag').style.color = 'var(--muted)';
+      $('packetJson').textContent = 'No packet accepted for this station yet.';
+      return;
+    }
+    $('remoteRisk').textContent = r.level;
+    $('remoteRisk').style.color = colorFor(r.level);
+    $('packetSeq').textContent = String(r.sequence).padStart(4, '0');
+    $('receiverTag').textContent = state.connected ? 'RECEIVER READY' : 'STALE';
+    $('receiverTag').style.color = state.connected ? 'var(--green)' : 'var(--red)';
+    const packet = {
+      node_id: r.node_id || state.nodeId,
+      sequence: r.sequence,
+      timestamp: r.timestamp,
+      soil_moisture_pct: r.soil_moisture_pct,
+      tilt_deg: r.tilt_deg,
+      vibration_level: r.vibration_level,
+      battery_pct: r.battery_pct,
+      risk: r.level,
+      risk_score_demo: r.score,
+      reasons: r.reasons,
+      transport: r.transport || 'SIMULATED_LORA'
+    };
+    $('packetJson').textContent = JSON.stringify(packet, null, 2);
+    const zone = $('zones').firstElementChild;
+    const dot = zone.querySelector('.zone-dot');
+    const status = zone.querySelector('.zone-status');
+    zone.querySelector('.zone-name').textContent = (r.node_id || state.nodeId) + ' · Ramban demo zone';
+    zone.querySelector('.zone-desc').textContent = 'Virtual node · simulated telemetry';
+    dot.style.background = colorFor(r.level);
+    status.textContent = r.level;
+    status.className = 'zone-status ' + classFor(r.level);
+    updateLastSeen();
+    renderStations();
+  }
+
+  function updateLastSeen() {
+    const receivedAt = state.received?.receivedAtMs || state.lastReceivedAt;
+    const age = Math.max(0, Math.floor((Date.now() - receivedAt) / 1000));
+    const text = age < 2 ? 'Just now' : age < 60 ? age + 's ago' : Math.floor(age / 60) + 'm ago';
+    $('kpiSeen').textContent = text;
+    $('kpiSeenFoot').textContent = 'Browser demo · local clock';
+    if (!state.connected) {
+      $('receiverTag').textContent = 'STALE';
+      $('receiverTag').style.color = 'var(--red)';
+    } else if (age >= 60) {
+      $('receiverTag').textContent = 'NO NEW DATA';
+      $('receiverTag').style.color = 'var(--yellow)';
+    } else {
+      $('receiverTag').textContent = 'RECEIVER READY';
+      $('receiverTag').style.color = 'var(--green)';
+    }
+  }
+
+  function renderChart() {
+    const data = state.history;
+    if (data.length < 2) return;
+    const W = 640, H = 180, pad = {l:28,r:10,t:12,b:24};
+    const x = i => pad.l + (W - pad.l - pad.r) * i / (data.length - 1);
+    const y = v => pad.t + (H - pad.t - pad.b) * (1 - clamp(v, 0, 100) / 100);
+    let svg = '';
+    for (let i=0; i<=4; i++) {
+      const yy = pad.t + (H - pad.t - pad.b) * i / 4;
+      svg += `<line x1="${pad.l}" y1="${yy}" x2="${W-pad.r}" y2="${yy}" stroke="#e8edf3" stroke-width="1"/><text x="${pad.l-7}" y="${yy+3}" text-anchor="end" font-size="9" fill="#8491a2">${100-i*25}</text>`;
+    }
+    const make = (values, colour) => `<polyline points="${values.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="${colour}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+    svg += make(data.map(d=>d.m), '#246bfe');
+    svg += make(data.map(d=>Math.min(100,d.t*8)), '#e39b26');
+    svg += make(data.map(d=>d.v), '#9467d8');
+    const last = data.length - 1;
+    [[data[last].m,'#246bfe'],[Math.min(100,data[last].t*8),'#e39b26'],[data[last].v,'#9467d8']].forEach(([value,colour]) => {
+      svg += `<circle cx="${x(last)}" cy="${y(value)}" r="4" fill="${colour}" stroke="white" stroke-width="2"/>`;
+    });
+    svg += `<text x="${pad.l}" y="${H-5}" font-size="9" fill="#8491a2">EARLIER</text><text x="${W-pad.r}" y="${H-5}" text-anchor="end" font-size="9" fill="#8491a2">LATEST</text>`;
+    $('chartSvg').innerHTML = svg;
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderLogs() {
+    $('logRows').innerHTML = state.logs.map(l => {
+      const pill = l.risk === 'CRITICAL' ? 'danger' : l.risk === 'WARNING' ? 'warn' : 'ok';
+      return `<tr><td>${escapeHtml(l.time)}</td><td>${escapeHtml(l.event)}</td><td><span class="log-pill ${pill}">${escapeHtml(l.risk)} · ${l.score}</span></td><td>${escapeHtml(l.link)}</td></tr>`;
+    }).join('') || '<tr><td colspan="4" class="muted">No events logged yet.</td></tr>';
+    $('logCount').textContent = `${state.logs.length} logged event${state.logs.length===1?'':'s'} · max 50 kept in this session`;
+  }
+
+  function csvCell(value) { return '"' + String(value ?? '').replace(/"/g, '""') + '"'; }
+  $('exportBtn').addEventListener('click', () => {
+    const headers = ['time','event','node_id','soil_moisture_pct','tilt_deg','vibration_level','battery_pct','risk','demo_score','link'];
+    const rows = [headers, ...state.logs.map(l => [l.time,l.event,l.node_id,l.moisture,l.tilt,l.vibration,l.battery,l.risk,l.score,l.link])];
+    const csv = '\ufeff' + rows.map(row => row.map(csvCell).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}));
+    const a = document.createElement('a'); a.href = url; a.download = 'himrakshak-simulation-log.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showFeedback('CSV log exported. It contains simulated events only.', 'success');
+  });
+
+  $('clearLogBtn').addEventListener('click', () => {
+    state.logs = []; renderLogs(); showFeedback('The session event log was cleared.', 'success');
+  });
+
+  $('copyPacketBtn').addEventListener('click', async () => {
+    const text = $('packetJson').textContent;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const temp = document.createElement('textarea');
+        temp.value = text; temp.style.position = 'fixed'; temp.style.opacity = '0';
+        document.body.appendChild(temp); temp.select();
+        const ok = document.execCommand('copy'); temp.remove();
+        if (!ok) throw new Error('Copy command unavailable');
+      }
+      showFeedback('Latest receiver packet copied as JSON.', 'success');
+    } catch (err) {
+      showFeedback('Copy was blocked by this browser. Select the JSON text and copy it manually.', 'error');
+    }
+  });
+
+  ['moistureSlider','tiltSlider','vibrationSlider'].forEach(id => {
+    $(id).addEventListener('input', () => updateValues(+$('moistureSlider').value, +$('tiltSlider').value, +$('vibrationSlider').value, false));
+    $(id).addEventListener('change', () => {
+      updateValues(+$('moistureSlider').value, +$('tiltSlider').value, +$('vibrationSlider').value, true);
+      if (state.connected) sendPacket('Manual sensor adjustment');
+      else {
+        pushLog('Manual sensor adjustment · local only', localAssessment(), 'NO LINK');
+        showFeedback('Local values updated. The disconnected receiver remains on its last packet.', 'error');
+      }
+    });
+  });
+
+  $('rainBtn').addEventListener('click', () => state.backend && state.connected ? simulateBackend('heavy_rain', 'Heavy-rain test scenario') : setValues(Math.max(75,state.moisture+38),Math.max(4,state.tilt),Math.max(28,state.vibration),'Heavy-rain test scenario'));
+  $('tiltBtn').addEventListener('click', () => state.backend && state.connected ? simulateBackend('slope_shift', 'Slope-shift test scenario') : setValues(Math.max(65,state.moisture),Math.max(9,state.tilt+7),Math.max(55,state.vibration),'Slope-shift test scenario'));
+  $('vibrationBtn').addEventListener('click', () => state.backend && state.connected ? simulateBackend('vibration_burst', 'Vibration-burst test scenario') : setValues(state.moisture,Math.max(1.5,state.tilt),88,'Vibration-burst test scenario'));
+  $('normalBtn').addEventListener('click', () => state.backend && state.connected ? simulateBackend('normal', 'Reset to baseline') : setValues(32,1.2,12,'Reset to baseline'));
+  $('packetBtn').addEventListener('click', () => sendPacket('Manual packet send'));
+  $('stationSelect').addEventListener('change', event => switchStation(event.target.value));
+
+  $('loadPacketBtn').addEventListener('click', () => {
+    try {
+      const data = JSON.parse($('manualPacketInput').value.trim());
+      if (!data || Array.isArray(data) || typeof data !== 'object') {
+        throw new Error('Packet must be a JSON object.');
+      }
+      if (state.backend) {
+        if (!state.connected) {
+          showFeedback('The simulated link is disconnected. The imported packet was not sent to the receiver.', 'error');
+          return;
+        }
+        sendBackendReading(data, 'Imported virtual packet');
+        return;
+      }
+      const requiredPairs = [
+        ['node_id', 'node'], ['soil_moisture_pct', 'moisture'],
+        ['tilt_deg', 'tilt'], ['vibration_level', 'vibration']
+      ];
+      for (const [canonical, alias] of requiredPairs) {
+        if (canonical in data && alias in data && data[canonical] !== data[alias]) {
+          throw new Error(`${canonical} conflicts with legacy alias ${alias}.`);
+        }
+        if (!(canonical in data) && !(alias in data)) {
+          throw new Error(`Missing required field: ${canonical}.`);
+        }
+      }
+      if (!Number.isInteger(data.sequence) || data.sequence < 0) {
+        throw new Error('sequence must be a non-negative integer.');
+      }
+      if (typeof data.timestamp !== 'string' || !/[zZ]|[+-]\d{2}:\d{2}$/.test(data.timestamp) || !Number.isFinite(Date.parse(data.timestamp))) {
+        throw new Error('timestamp must be a valid timezone-aware value.');
+      }
+      if (!('battery_pct' in data)) {
+        throw new Error('Missing required field: battery_pct.');
+      }
+      const numericFields = ['soil_moisture_pct', 'moisture', 'tilt_deg', 'tilt', 'vibration_level', 'vibration', 'battery_pct'];
+      if (numericFields.some(field => typeof data[field] === 'boolean')) {
+        throw new Error('Sensor values must be numeric; boolean values are not accepted.');
+      }
+      const m = Number(data.soil_moisture_pct ?? data.moisture);
+      const t = Number(data.tilt_deg ?? data.tilt);
+      const v = Number(data.vibration_level ?? data.vibration);
+      const b = data.battery_pct == null ? state.battery : Number(data.battery_pct);
+      if (![m,t,v,b].every(Number.isFinite)) throw new Error('Required sensor fields must be numeric.');
+      if (m < 0 || m > 100 || t < 0 || t > 15 || v < 0 || v > 100 || b < 0 || b > 100) throw new Error('Sensor values are outside the accepted demo ranges.');
+      const incomingNode = String(data.node_id ?? data.node ?? 'HR-01').trim().slice(0,40) || 'HR-01';
+      state.nodeId = incomingNode;
+      state.battery = Math.round(b);
+      updateValues(m,t,v,true);
+      const assessment = evaluate(state.moisture,state.tilt,state.vibration);
+      state.sequence = Math.max(state.sequence + 1, Number(data.sequence) || 0);
+      state.packets += 1;
+      const reading = currentReading();
+      state.received = {...reading,...assessment,sequence:state.sequence,received_at:isoNow(),receivedAtMs:Date.now(),transport:String(data.transport || 'WOKWI_SOFTWARE_SIMULATION')};
+      state.lastReceivedAt = Date.now();
+      pushLog('Imported virtual ESP32 packet',assessment,'MANUAL IMPORT',reading);
+      renderLocal(); renderRemote(); renderChart();
+      showFeedback('Virtual packet imported and reassessed by the dashboard demo rules. Incoming risk labels are not trusted; the browser recalculates its own demo status.', 'success');
+    } catch (err) {
+      showFeedback('Could not import packet: ' + (err && err.message ? err.message : 'invalid JSON') + ' Check that moisture, tilt and vibration are present and within the demo ranges.', 'error');
+    }
+  });
+
+  $('linkToggle').addEventListener('click', () => {
+    if (state.backend) {
+      reliabilityAction(state.connected ? 'disconnect' : 'reconnect');
+      return;
+    }
+    state.connected = !state.connected;
+    if (state.connected) {
+      renderLocal();
+      sendPacket('Link restored · latest state sent');
+    } else {
+      pushLog('Simulated receiver link disconnected',localAssessment(),'LINK DOWN');
+      renderLocal(); renderRemote();
+      showFeedback('Simulated link disconnected. Local sensor controls still work, but they will not update the receiver.', 'error');
+    }
+  });
+
+  $('dropPacketBtn').addEventListener('click', () => reliabilityAction('drop', reliabilityReading()));
+  $('delayPacketBtn').addEventListener('click', () => reliabilityAction('delay', reliabilityReading()));
+  $('releasePacketBtn').addEventListener('click', () => reliabilityAction('release'));
+  $('duplicatePacketBtn').addEventListener('click', () => {
+    if (!state.received) {
+      showFeedback('Accept a packet before running a duplicate-sequence test.', 'error');
+      return;
+    }
+    reliabilityAction('duplicate', reliabilityReading(Number(state.received.sequence || 0)));
+  });
+  $('stalePacketBtn').addEventListener('click', () => {
+    const latestSequence = state.received ? Number(state.received.sequence || 0) : null;
+    if (latestSequence == null || latestSequence < 1) {
+      showFeedback('A stale-sequence test requires at least two accepted sequence values.', 'error');
+      return;
+    }
+    reliabilityAction('stale', reliabilityReading(latestSequence - 1));
+  });
+
+  // Populate a useful first chart without pretending these are collected measurements.
+  for (let i=0;i<11;i++) state.history.push({m:29+Math.round(Math.sin(i*.6)*3),t:1.0+Math.abs(Math.sin(i*.4))*.5,v:10+Math.round(Math.abs(Math.cos(i*.5))*5)});
+  state.history.push({m:state.moisture,t:state.tilt,v:state.vibration});
+  const firstReading = currentReading();
+  state.received = {...firstReading,...localAssessment(),sequence:state.sequence,received_at:isoNow(),receivedAtMs:Date.now(),transport:'SIMULATED_LORA'};
+  pushLog('Simulator started',localAssessment(),'RECEIVED',firstReading);
+  saveCurrentStation();
+  renderLocal(); renderRemote(); renderChart();
+  detectBackend();
+  window.setInterval(updateLastSeen, 1000);
+})();
+</script>
+</body>
+</html>
