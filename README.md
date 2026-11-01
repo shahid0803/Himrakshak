@@ -4,7 +4,7 @@
 
 HimRakshak demonstrates how virtual slope-monitoring stations can send sensor-like readings to a dashboard, receive an explainable demonstration risk assessment, and simulate communication failures. The project is designed as an academic and hackathon prototype—not as a field-deployed or life-critical warning system.
 
-> **Project status: Phase 10 complete.** The local application, improved dashboard, Python backend, three-station simulator, software reliability controls, tests, Wokwi starter files, and cloud deployment configuration are included. Actual cloud deployment and Wokwi-to-cloud networking have **not** been completed yet.
+> **Project status: Phase 11 deployment-ready.** The local application, improved dashboard, Python backend, three-station simulator, software reliability controls, tests, Wokwi starter files, and Render deployment configuration are included. A live Render URL is created only after the repository owner applies the Blueprint; Wokwi-to-cloud networking is not implemented.
 
 ## Important: What this project is—and is not
 
@@ -50,7 +50,7 @@ HimRakshak demonstrates how virtual slope-monitoring stations can send sensor-li
 | Tests | Python `unittest` |
 | Virtual hardware | ESP32 DevKit v1 starter sketch and circuit for Wokwi |
 | Static hosting workflow | GitHub Actions / GitHub Pages (`.github/workflows/pages.yml`) |
-| Cloud configuration | Render Blueprint (`render.yaml`); deployment is pending |
+| Cloud configuration | Render Blueprint (`render.yaml`); ready for manual deployment |
 
 There is no React, FastAPI, database, machine-learning model, live weather integration, or physical LoRa driver in the current implementation.
 
@@ -184,7 +184,7 @@ Run the end-to-end HTTP acceptance test separately:
 python -B -m unittest tests.test_demo_acceptance -v
 ```
 
-The Phase 10 handover report records 111 passing unit/integration test cases, 118 passing subtests, and a separate passing acceptance test. Re-run the commands above on your own checkout to verify its current state.
+The Phase 11 handover retains the previously verified 111 unit/integration test cases, 118 subtests, and separate passing acceptance test. Re-run the commands above on your own checkout to verify its current state.
 
 ## API overview
 
@@ -230,9 +230,18 @@ Remote-mode controls include:
 
 ### Deployment status
 
-Cloud deployment has **not** yet been performed. `render.yaml` is preparation/configuration only; it does not mean a public backend is already running. Follow [`docs/deployment.md`](docs/deployment.md) when beginning the deployment phase.
+The application is ready for manual Render deployment through `render.yaml`. The repository does not claim a public backend URL until the Blueprint has been applied and the post-deployment checklist in [`docs/deployment.md`](docs/deployment.md) passes.
 
 The server stores station state and event history in process memory (up to 100 events per station). There is no database or persistent storage, so state resets when the process restarts or the hosting service is recycled. Free hosting plans may also sleep or have cold starts; check the provider's current limits before a presentation.
+
+### Manual Render deployment
+
+1. Sign in to Render and choose **New → Blueprint**.
+2. Connect `shahid0803/Himrakshak` and select the `main` branch.
+3. Review the `himrakshak` web service loaded from the root `render.yaml`.
+4. Keep the **Free** plan, allow Render to generate `HIMRAKSHAK_ADMIN_KEY`, and apply the Blueprint.
+5. Wait for the deploy and health check to complete, then use the HTTPS service URL shown by Render.
+6. Run the endpoint checklist in [`docs/deployment.md`](docs/deployment.md); do not record or invent a URL before deployment.
 
 ## GitHub Pages static demo
 
@@ -262,7 +271,7 @@ The current sketch uses simulated inputs and Serial output. Importing a packet i
 
 ## Documentation
 
-- [`FINAL_HANDOFF.md`](FINAL_HANDOFF.md) — Phase 10 project handover and implementation summary.
+- [`FINAL_HANDOFF.md`](FINAL_HANDOFF.md) — Phase 11 project handover and implementation summary.
 - [`docs/demo-runbook.md`](docs/demo-runbook.md) — local demonstration instructions.
 - [`docs/demo-acceptance-checklist.md`](docs/demo-acceptance-checklist.md) — repeatable demo checks.
 - [`docs/api-contract.md`](docs/api-contract.md) — HTTP API contract.
@@ -276,7 +285,7 @@ The current sketch uses simulated inputs and Serial output. Importing a packet i
 
 These are future development tasks, not completed features:
 
-1. Deploy and verify the Python service in a cloud environment.
+1. Apply the Render Blueprint and record the generated service URL outside the repository.
 2. Add authenticated Wokwi Wi-Fi/HTTPS telemetry and connect it to the cloud API.
 3. Demonstrate multiple independent virtual senders and end-to-end packet handling.
 4. Expand communication-failure and cloud-recovery testing.

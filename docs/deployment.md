@@ -73,7 +73,7 @@ python -m himrakshak.server --port 9000
 
 ## 3. Cloud-ready server (Mode B)
 
-Phase 10 introduces the explicit cloud execution mode for hosting platforms such as Render, Railway, or containerized environments.
+Phase 11 verifies the explicit cloud execution mode for hosting platforms such as Render, Railway, or containerized environments.
 
 ### Cloud startup command
 
@@ -95,9 +95,19 @@ python -m himrakshak.server --allow-remote
 
 ---
 
-## 4. Render deployment parameters (Target for Phase 11)
+## 4. Render deployment (Phase 11)
 
-Actual cloud deployment is scheduled for **Phase 11**. The repository includes a `render.yaml` Blueprint definition for zero-configuration setup.
+The repository is deployment-ready for a Render Web Service through the included `render.yaml` Blueprint. This repository does not claim a live public URL: the service URL is assigned by Render after the Blueprint is created.
+
+### Deploy with the Render Blueprint
+
+1. Sign in to Render and choose **New → Blueprint**.
+2. Connect the GitHub repository `shahid0803/Himrakshak` and select the `main` branch.
+3. Review the `himrakshak` web service shown by `render.yaml`.
+4. Keep the **Free** plan selected; do not add a paid database or other paid resource.
+5. Apply the Blueprint. Render generates `HIMRAKSHAK_ADMIN_KEY` as a secret environment value.
+6. Wait for the first deploy to finish, then open the service URL shown in the Render dashboard.
+7. Keep the generated admin key in Render only. Never copy it into `index.html`, browser developer tools, GitHub, or a public Wokwi sketch.
 
 ### Web service parameters
 
@@ -131,6 +141,33 @@ Expected HTTP 200 JSON payload:
 ```
 
 The health check does not modify station state, requires no authentication, and executes in sub-millisecond time.
+
+### Post-deployment endpoint checklist
+
+Replace `<service-url>` with the HTTPS URL displayed by Render:
+
+```powershell
+curl.exe -i https://<service-url>/api/health
+curl.exe -i https://<service-url>/api/state
+curl.exe -i https://<service-url>/api/stations
+curl.exe -i https://<service-url>/api/stations/HR-01
+curl.exe -i https://<service-url>/api/stations/HR-02
+curl.exe -i https://<service-url>/api/stations/HR-03
+curl.exe -i https://<service-url>/
+curl.exe -i -X POST https://<service-url>/api/stations/HR-01/simulate `
+  -H "Content-Type: application/json" -d '{"scenario":"normal"}'
+```
+
+Confirm that:
+
+- `/api/health` returns HTTP 200 and `"status": "ok"`.
+- `/api/state` responds with the current state payload.
+- `/api/stations` returns exactly `HR-01`, `HR-02`, and `HR-03`.
+- Each station endpoint returns the corresponding station details and history.
+- `/` serves the dashboard over HTTPS and its indicator identifies the connected backend.
+- The unauthenticated mutation request returns HTTP 401 or 403 without changing station state.
+- The dashboard displays a clear message that remote administrative controls are unavailable when a protected mutation is rejected.
+- Local mode still starts with `python -m himrakshak.server` and remains bound to `127.0.0.1`.
 
 ### Cloud security controls
 
