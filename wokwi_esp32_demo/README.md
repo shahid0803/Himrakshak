@@ -35,8 +35,10 @@ Copy-Item sender_profiles\hr01.h station_config.h
 | `hr02.h` | HR-02 | Heavy rain preset plus live inputs |
 | `hr03.h` | HR-03 | Slope-shift preset plus live inputs |
 
-Each profile has an independent sequence counter because each Wokwi run is a
-separate virtual sender. Do not run two senders with the same station ID.
+Each profile is an independent virtual sender. On startup it reads the station
+state when possible and advances its next sequence beyond the backend's latest
+accepted device sequence; it preserves a higher locally retained sequence.
+Do not run two senders with the same station ID.
 
 ## Control mapping
 
@@ -56,10 +58,13 @@ non-authoritative display metadata and the honest
 
 Packets are held in a bounded in-memory FIFO of ten entries. Wi-Fi failures,
 timeouts, 429 responses, and ambiguous errors use exponential backoff. A
-409 response is reported as duplicate/stale and retained for review rather
-than silently discarded. The queue is RAM-only and is lost on an ESP32 reset.
-Serial output exposes connection state, attempts, deliveries, retries, queue
-depth, and the last error without printing credentials.
+structured 409 response triggers `GET /api/stations/{station_id}`: a matching
+sequence and reading is counted as already delivered; an older packet is
+explicitly counted and warned as superseded; newer, disconnected, failed-GET,
+or same-sequence/different-reading conflicts remain queued. The queue is RAM
+only and is lost on an ESP32 reset. Serial output exposes connection state,
+attempts, deliveries, already-delivered and superseded counters, retries,
+queue depth, and the last error without printing credentials.
 
 Wokwi simulates ESP32 logic, inputs, LEDs, buzzer, Wi-Fi, and HTTPS only. It
 does not simulate an SX1262 radio or prove LoRa packet delivery/range. The

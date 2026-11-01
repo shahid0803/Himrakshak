@@ -153,24 +153,9 @@ python -B -m unittest discover -s tests -v
 python -B -m unittest tests.test_demo_acceptance -v
 ```
 
-### Actual Verified Test Results (Phase 11 Handover)
-
-```text
-Suite 1 (Comprehensive Tests):
-Ran 111 tests in 12.463s
-- test_demo_acceptance.py:     1 passed
-- test_reliability.py:         5 passed
-- test_risk.py:               10 passed
-- test_schema.py:             51 passed (118 subtests passed)
-- test_server.py:             26 passed
-- test_simulator.py:          11 passed
-- test_stations.py:            7 passed
-Result: OK (111 passed, 0 failed, 0 errors, 118 subtests passed)
-
-Suite 2 (Acceptance Flow):
-Ran 1 test in 0.764s
-Result: OK (1 passed, 0 failed, 0 errors)
-```
+The exact post-merge cleanup results, including the verification date and
+firmware contract count, are recorded in
+[`HIMRAKSHAK_FINAL_RELEASE_REPORT.md`](HIMRAKSHAK_FINAL_RELEASE_REPORT.md).
 
 ---
 
@@ -196,9 +181,10 @@ Result: OK (1 passed, 0 failed, 0 errors)
 
 - **Current Implementation:** The virtual ESP32 project in `wokwi_esp32_demo/` simulates 2 potentiometers (moisture, tilt), 1 pushbutton (vibration burst), 3 status LEDs (Normal, Warning, Critical), and a piezo buzzer.
 - **Output:** Outputs formatted canonical JSON packets to the Arduino `Serial` monitor at 115200 baud.
-- **Current Integration Mode:** Manual copy/paste of JSON lines from Wokwi Serial Monitor into the dashboard's **Import virtual ESP32 packet** input field.
+- **Current Integration Mode:** The firmware can POST packets directly over
+  simulated Wi-Fi and HTTPS. Manual JSON import remains available as a local
+  fallback, not the only supported method.
 - **Limitations:**
-  - The sketch currently lacks Wi-Fi (`WiFi.h`) and HTTPS (`HTTPClient.h`) network transmission code (scheduled for Phase 12).
   - Wokwi simulates software logic only; it does **not** simulate physical SX1262 LoRa radio transmissions or prove wireless radio propagation.
 
 ---
@@ -225,10 +211,11 @@ Apply the Blueprint from the Render dashboard:
 
 Do not record or invent a public URL in this repository; Render assigns it after deployment.
 
-### Remaining Steps for Future Phases
-- **Phase 12:** Implement `WiFi.h` and `HTTPClient.h` in `wokwi_esp32_demo/sketch.ino` targeting the cloud endpoint.
-- **Phase 13:** Validate end-to-end live ingestion from Wokwi to cloud backend to live dashboard.
-- **Phase 14:** Scale Wokwi virtual hardware across all three stations (`HR-01`, `HR-02`, `HR-03`).
+### Remaining manual verification
+- Verify the deployed Render commit in the Render dashboard.
+- Compile and run each sender profile in Wokwi.
+- Verify startup sequence synchronization, HTTP 409 reconciliation, and Wi-Fi
+  outage recovery.
 
 ---
 

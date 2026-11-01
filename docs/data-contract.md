@@ -1,6 +1,6 @@
 # HimRakshak sensor-data contract
 
-This document defines the Phase 1 canonical input contract for future sensor
+This document defines the canonical input contract for sensor
 simulators, the risk engine, the local API, dashboard integration, and the
 Wokwi demonstration.
 
@@ -87,3 +87,7 @@ generate readings or calculate risk.
 The Wokwi sender reads `battery_pct` from the dedicated third potentiometer in
 `wokwi_esp32_demo/diagram.json`; it does not silently substitute zero for a
 missing battery value.
+
+The sender owns `sequence`. The backend preserves accepted device sequences,
+rejects duplicate and stale values with HTTP 409, and separately maintains
+server event ordering and the Python simulator's next generated sequence.

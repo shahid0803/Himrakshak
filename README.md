@@ -18,7 +18,9 @@ HimRakshak demonstrates how virtual slope-monitoring stations can send sensor-li
 - The Wokwi ESP32 sketch sends canonical packets over simulated Wokwi-GUEST
   Wi-Fi and HTTPS to the existing public ingestion route. This is not physical
   LoRa or a real sensor measurement.
-- No physical LoRa/SX1262 hardware integration or active cloud deployment is included in the current project.
+- No physical LoRa/SX1262 hardware integration is included. The existing Render
+  service is live at https://himrakshak.onrender.com/; its deployed commit is
+  managed by Render and must not be inferred from GitHub `main` or Wokwi state.
 
 **Do not use HimRakshak to make real-world evacuation, road-closure, or public-safety decisions.**
 
@@ -54,9 +56,11 @@ HimRakshak demonstrates how virtual slope-monitoring stations can send sensor-li
 | Visualization | Browser Canvas API and native browser features |
 | Backend | Python 3.10+ standard library (`http.server`, `json`, `threading`, `hmac`, etc.) |
 | Tests | Python `unittest` |
-| Virtual hardware | ESP32 DevKit v1 starter sketch and circuit for Wokwi |
-| Static hosting workflow | GitHub Actions / GitHub Pages (`.github/workflows/pages.yml`) |
-| Cloud configuration | Render Blueprint (`render.yaml`); ready for manual deployment |
+| Risk engine | Explainable rule-based demonstration model |
+| Communication | Simulated Wi-Fi and HTTPS |
+| Virtual hardware | ESP32 DevKit v1 with Wokwi |
+| Hosting | Render Web Service and GitHub Pages static dashboard |
+| Testing | Python `unittest` and firmware contract tests |
 
 There is no React, FastAPI, database, machine-learning model, live weather integration, or physical LoRa driver in the current implementation.
 
@@ -67,6 +71,7 @@ HimRakshak/
 ├── index.html
 ├── README.md
 ├── FINAL_HANDOFF.md
+├── HIMRAKSHAK_FINAL_RELEASE_REPORT.md
 ├── requirements.txt
 ├── render.yaml
 ├── .gitignore
@@ -79,6 +84,7 @@ HimRakshak/
 │   ├── demo-acceptance-checklist.md
 │   ├── demo-runbook.md
 │   ├── deployment.md
+│   ├── FINAL_DEMO_RUNBOOK.md
 │   ├── frontend-regression-checklist.md
 │   ├── multi-station.md
 │   ├── phase-4.3-regression-checklist.md
@@ -96,6 +102,7 @@ HimRakshak/
 ├── tests/
 │   ├── __init__.py
 │   ├── test_demo_acceptance.py
+│   ├── test_firmware_contract.py
 │   ├── test_reliability.py
 │   ├── test_risk.py
 │   ├── test_schema.py
@@ -105,6 +112,12 @@ HimRakshak/
 └── wokwi_esp32_demo/
     ├── README.md
     ├── diagram.json
+    ├── isrg_root_x1.h
+    ├── station_config.h
+    ├── sender_profiles/
+    │   ├── hr01.h
+    │   ├── hr02.h
+    │   └── hr03.h
     └── sketch.ino
 ```
 
@@ -190,7 +203,9 @@ Run the end-to-end HTTP acceptance test separately:
 python -B -m unittest tests.test_demo_acceptance -v
 ```
 
-The Phase 11 handover retains the previously verified 111 unit/integration test cases, 118 subtests, and separate passing acceptance test. Re-run the commands above on your own checkout to verify its current state.
+The exact result of the latest verification run is recorded in
+[`HIMRAKSHAK_FINAL_RELEASE_REPORT.md`](HIMRAKSHAK_FINAL_RELEASE_REPORT.md).
+Do not treat an older test count copied into a handover as current.
 
 ## API overview
 
@@ -236,18 +251,22 @@ Remote-mode controls include:
 
 ### Deployment status
 
-The application is ready for manual Render deployment through `render.yaml`. The repository does not claim a public backend URL until the Blueprint has been applied and the post-deployment checklist in [`docs/deployment.md`](docs/deployment.md) passes.
+The existing Render service is available at
+https://himrakshak.onrender.com/. This confirms a live endpoint, not the
+deployment of every commit on GitHub `main`; verify the deployed commit in the
+Render dashboard before claiming that a new firmware or documentation change is
+live. The Blueprint remains the reproducible deployment configuration.
 
 The server stores station state and event history in process memory (up to 100 events per station). There is no database or persistent storage, so state resets when the process restarts or the hosting service is recycled. Free hosting plans may also sleep or have cold starts; check the provider's current limits before a presentation.
 
 ### Manual Render deployment
 
-1. Sign in to Render and choose **New → Blueprint**.
+1. Sign in to Render and choose **New → Blueprint** when creating a separate environment.
 2. Connect `shahid0803/Himrakshak` and select the `main` branch.
 3. Review the `himrakshak` web service loaded from the root `render.yaml`.
 4. Keep the **Free** plan, allow Render to generate `HIMRAKSHAK_ADMIN_KEY`, and apply the Blueprint.
 5. Wait for the deploy and health check to complete, then use the HTTPS service URL shown by Render.
-6. Run the endpoint checklist in [`docs/deployment.md`](docs/deployment.md); do not record or invent a URL before deployment.
+6. Run the endpoint checklist in [`docs/deployment.md`](docs/deployment.md).
 
 ## GitHub Pages static demo
 
@@ -296,12 +315,12 @@ contains the administrative key. Detailed setup and recovery boundaries are in
 
 ## Remaining manual validation
 
-These are future development tasks, not completed features:
+These are remaining verification tasks, not claims about missing implementation:
 
-1. Apply the Render Blueprint and record the generated service URL outside the repository.
+1. Verify the deployed Render commit in the Render dashboard.
 2. Run Wokwi compilation and Wokwi-GUEST TLS delivery manually.
 3. Demonstrate three independent sender projects against the deployed service.
-4. Validate cloud outage and recovery during a live presentation.
+4. Validate sender restart, HTTP 409 reconciliation, and Wi-Fi outage recovery live.
 5. Design and validate any physical sensor/LoRa prototype separately; it is excluded from this release.
 
 ---
