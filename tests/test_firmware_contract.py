@@ -28,6 +28,33 @@ class FirmwareContractTests(unittest.TestCase):
         self.assertNotIn("setInsecure", source)
         self.assertRegex(source, r"TELEMETRY_INTERVAL_MS\s*=\s*10000")
 
+    def test_firmware_reconciles_structured_409_conflicts(self):
+        source = FIRMWARE.read_text(encoding="utf-8")
+        for marker in (
+            'GET station state',
+            'String(INGEST_URL) + HIMRAKSHAK_STATION_ID',
+            'classification',
+            'reconcileConflict',
+            'readingsMatch',
+            'alreadyDeliveredPackets',
+            'supersededPackets',
+            'blockedPackets',
+            'Startup sequence synchronized',
+            'pending sequence is newer than backend sequence',
+            'Sequence reuse conflict',
+            'receiver disconnected during 409 reconciliation',
+        ):
+            self.assertIn(marker, source)
+        self.assertRegex(source, r'if \(packet\.sequence == state\.latestSequence')
+        self.assertRegex(source, r'if \(packet\.sequence < state\.latestSequence')
+
+    def test_backend_sequence_protection_contract_remains_documented(self):
+        api_contract = (ROOT / "docs" / "api-contract.md").read_text(encoding="utf-8")
+        self.assertIn("preserves the incoming device-assigned `sequence`", api_contract)
+        self.assertIn("duplicate", api_contract)
+        self.assertIn("stale", api_contract)
+        self.assertIn("HTTP 409", api_contract)
+
     def test_three_sender_profiles_are_independent_and_allow_scenarios(self):
         expected = {
             "hr01.h": ("HR-01", "normal"),

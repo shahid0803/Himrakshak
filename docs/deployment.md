@@ -1,6 +1,6 @@
 # HimRakshak deployment documentation
 
-This document describes deployment procedures for HimRakshak across static hosting, local execution, and future cloud PaaS hosting.
+This document describes deployment procedures for HimRakshak across static hosting, local execution, and the existing Render service.
 
 ---
 
@@ -23,7 +23,7 @@ The workflow does not start the Python API and does not publish credentials, dev
 
 ### Expected public URL
 
-`https://jaydeep2506747.github.io/HimRakshak/`
+`https://shahid0803.github.io/Himrakshak/`
 
 Treat the URL as usable only after the Pages workflow completes successfully and the page has been opened and checked. A workflow file or repository setting alone is not evidence that the site is live.
 
@@ -95,18 +95,22 @@ python -m himrakshak.server --allow-remote
 
 ---
 
-## 4. Render deployment (Phase 11)
+## 4. Render deployment
 
-The repository is deployment-ready for a Render Web Service through the included `render.yaml` Blueprint. This repository does not claim a live public URL: the service URL is assigned by Render after the Blueprint is created.
+The repository includes the `render.yaml` Blueprint for the existing Render Web
+Service at https://himrakshak.onrender.com/. A successful health response proves
+the service is live, but does not prove which GitHub commit Render deployed.
+Check the Render dashboard's deploy record before describing a particular commit
+or firmware revision as deployed.
 
 ### Deploy with the Render Blueprint
 
-1. Sign in to Render and choose **New → Blueprint**.
+1. Sign in to Render and choose **New → Blueprint** for a new environment or service.
 2. Connect the GitHub repository `shahid0803/Himrakshak` and select the `main` branch.
 3. Review the `himrakshak` web service shown by `render.yaml`.
 4. Keep the **Free** plan selected; do not add a paid database or other paid resource.
 5. Apply the Blueprint. Render generates `HIMRAKSHAK_ADMIN_KEY` as a secret environment value.
-6. Wait for the first deploy to finish, then open the service URL shown in the Render dashboard.
+6. Wait for the deploy to finish, then open the service URL shown in the Render dashboard.
 7. Keep the generated admin key in Render only. Never copy it into `index.html`, browser developer tools, GitHub, or a public Wokwi sketch.
 
 ### Web service parameters
@@ -177,7 +181,7 @@ Confirm that:
 4. **Administrative Protection:** Simulated fault-injection endpoints cannot be tampered with by public internet users. When running with `--allow-remote`, mutations are blocked unless authorized with `X-HimRakshak-Admin`.
 5. **No Wildcard CORS:** The deployment follows a unified single-service model where the dashboard (`/`) and API (`/api/`) share the same origin, eliminating cross-origin exposure.
 
-### Phase 11.1 dashboard synchronization
+### Dashboard synchronization
 
 The dashboard determines its mode from the page origin and a successful
 same-origin `/api/health` response:

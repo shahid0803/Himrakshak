@@ -112,22 +112,38 @@ Open `index.html` without a server to verify standalone mode. Stop or block
 the cloud backend to verify `CLOUD BACKEND UNAVAILABLE`, then restore it and
 observe automatic polling recovery.
 
-## 10. Known limitations and status
+## 10. Manual Wokwi verification checklist
+
+1. Open the Wokwi ESP32 project and select the HR-01 profile.
+2. Compile the firmware and start the simulation.
+3. Verify Wokwi-GUEST Wi-Fi connectivity and the HTTPS TLS handshake.
+4. Verify Render accepts a packet and HR-01 appears in `/api/stations`.
+5. Repeat the compile, delivery, and station check for HR-02 and HR-03.
+6. Restart a sender and verify startup sequence reconciliation does not reset
+   an established backend sequence.
+7. Simulate a Wi-Fi outage, confirm the bounded FIFO and exponential backoff,
+   then restore connectivity and observe FIFO recovery.
+8. Create a duplicate or stale conflict and verify the serial warning,
+   already-delivered/superseded counters, and queue behavior.
+
+The checklist above is manual evidence only; local tests do not claim Wokwi
+compilation or live cloud execution.
+
+## 11. Known limitations and status
 
 Implemented and automated-tested: backend contracts, station isolation,
 sequence preservation, risk recalculation, dashboard polling states, firmware
 packet contract checks, diagram JSON validation, and local reliability model.
 
-Manually verified by the operator: Wokwi compilation, Wokwi-GUEST networking,
-TLS handshake, live Render ingestion, three simultaneous sender runs, and
-visual dashboard updates. These require the Wokwi and cloud environments and
-are not claimed by local tests.
+Still requiring operator verification: Wokwi compilation, Wokwi-GUEST
+networking, TLS handshake, live Render ingestion, three sender runs, sender
+restart reconciliation, and visual dashboard updates.
 
 Not physically validated: real sensors, physical ESP32 boards, SX1262 LoRa,
 radio range, field deployment, persistence across restart, or scientific
 landslide prediction.
 
-## 11. Suggested presentation flow
+## 12. Suggested presentation flow
 
 1. Show standalone offline mode and explain the disclosure.
 2. Start local backend and show the three-station roster.

@@ -10,6 +10,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <math.h>
+#include <stdlib.h>
 
 #include "isrg_root_x1.h"
 #include "station_config.h"
@@ -55,9 +56,21 @@ unsigned long packetsAttempted = 0;
 unsigned long packetsDelivered = 0;
 unsigned long failedRequests = 0;
 unsigned long retryCount = 0;
+unsigned long alreadyDeliveredPackets = 0;
+unsigned long supersededPackets = 0;
+unsigned long blockedPackets = 0;
 unsigned long nextWiFiAttempt = 0;
 String lastError = "";
 String lastDelivery = "never";
+String lastResponse = "";
+
+struct BackendStationState {
+  bool retrieved;
+  bool receiverConnected;
+  bool hasLatest;
+  unsigned long latestSequence;
+  String latestReading;
+};
 
 Assessment assessRisk(int moisture, float tiltDeg, int vibration) {
   float moisturePart = max(0.0f, (moisture - 45.0f) / 55.0f) * 35.0f;
@@ -122,9 +135,10 @@ String buildPacket(unsigned long sequence) {
 }
 
 void reportStatus(const char *message) {
-  Serial.printf("[%lu] %s | station=%s pending=%u attempted=%lu delivered=%lu failed=%lu retries=%lu last_error=%s\n",
+  Serial.printf("[%lu] %s | station=%s pending=%u attempted=%lu delivered=%lu already_delivered=%lu superseded=%lu blocked=%lu failed=%lu retries=%lu last_error=%s\n",
                 millis(), message, HIMRAKSHAK_STATION_ID, (unsigned)pendingCount,
-                packetsAttempted, packetsDelivered, failedRequests, retryCount,
+                packetsAttempted, packetsDelivered, alreadyDeliveredPackets,
+                supersededPackets, blockedPackets, failedRequests, retryCount,
                 lastError.length() ? lastError.c_str() : "none");
 }
 
@@ -170,6 +184,134 @@ bool connectWiFi() {
   return false;
 }
 
+String jsonValue(const String &json, const char *key) {
+  String marker = String("\"") + key + "\"";
+  int keyPos = json.indexOf(marker);
+  if (keyPos < 0) return "";
+  int colon = json.indexOf(':', keyPos + marker.length());
+  if (colon < 0) return "";
+  int start = colon + 1;
+  while (start < (int)json.length() && isspace(json[start])) start++;
+  if (start >= (int)json.length()) return "";
+  if (json[start] == '"') {
+    int end = start + 1;
+    while (end < (int)json.length()) {
+      if (json[end] == '"' && json[end - 1] != '\\') {
+        return json.substring(start + 1, end);
+      }
+      end++;
+    }
+    return "";
+  }
+  int end = start;
+  while (end < (int)json.length() && json[end] != ',' && json[end] != '}' &&
+         json[end] != ']' && !isspace(json[end])) {
+    end++;
+  }
+  return json.substring(start, end);
+}
+
+String jsonObjectValue(const String &json, const char *key) {
+  String marker = String("\"") + key + "\"";
+  int keyPos = json.indexOf(marker);
+  if (keyPos < 0) return "";
+  int colon = json.indexOf(':', keyPos + marker.length());
+  if (colon < 0) return "";
+  int start = colon + 1;
+  while (start < (int)json.length() && isspace(json[start])) start++;
+  if (start >= (int)json.length() || json[start] != '{') return "";
+  int depth = 0;
+  bool inString = false;
+  for (int i = start; i < (int)json.length(); i++) {
+    char ch = json[i];
+    if (ch == '"' && (i == start || json[i - 1] != '\\')) inString = !inString;
+    if (inString) continue;
+    if (ch == '{') depth++;
+    if (ch == '}' && --depth == 0) return json.substring(start, i + 1);
+  }
+  return "";
+}
+
+bool parseUnsigned(const String &value, unsigned long &result) {
+  if (value.length() == 0) return false;
+  for (size_t i = 0; i < value.length(); i++) {
+    if (!isDigit(value[i])) return false;
+  }
+  result = strtoul(value.c_str(), nullptr, 10);
+  return true;
+}
+
+bool readingsMatch(const String &pendingJson, const String &backendReading) {
+  const char *fields[] = {
+      "node_id", "sequence", "timestamp", "soil_moisture_pct",
+      "tilt_deg", "vibration_level", "battery_pct", "transport"};
+  for (const char *field : fields) {
+    if (jsonValue(pendingJson, field) != jsonValue(backendReading, field)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool getStationState(BackendStationState &state) {
+  state = {false, true, false, 0, ""};
+  if (!connectWiFi()) return false;
+  WiFiClientSecure client;
+  client.setCACert(HIMRAKSHAK_ROOT_CA);
+  client.setTimeout(8000);
+  HTTPClient https;
+  String url = String(INGEST_URL) + HIMRAKSHAK_STATION_ID;
+  if (!https.begin(client, url)) {
+    lastError = "HTTPS begin failed while reading station state";
+    return false;
+  }
+  https.setConnectTimeout(8000);
+  https.setTimeout(8000);
+  int status = https.GET();
+  String response = https.getString();
+  https.end();
+  if (status != 200) {
+    lastError = String("GET station state HTTP ") + status;
+    return false;
+  }
+  String station = jsonObjectValue(response, "station");
+  if (station.length() == 0) {
+    lastError = "GET station state missing station object";
+    return false;
+  }
+  state.retrieved = true;
+  state.receiverConnected = jsonValue(station, "receiver_connected") != "false";
+  String latest = jsonObjectValue(station, "latest");
+  if (latest.length() == 0 || latest == "null") return true;
+  state.latestReading = jsonObjectValue(latest, "reading");
+  String latestSequence = jsonValue(state.latestReading, "sequence");
+  state.hasLatest = parseUnsigned(latestSequence, state.latestSequence);
+  if (!state.hasLatest) {
+    lastError = "GET station state has invalid latest sequence";
+    state.retrieved = false;
+  }
+  return state.retrieved;
+}
+
+void synchronizeStartupSequence() {
+  BackendStationState state;
+  if (!getStationState(state)) {
+    reportStatus("Station state unavailable; preserving local sequence");
+    return;
+  }
+  if (state.hasLatest && sequenceNumber <= state.latestSequence) {
+    sequenceNumber = state.latestSequence + 1;
+    Serial.printf("Startup sequence synchronized to %lu after backend sequence %lu\n",
+                  sequenceNumber, state.latestSequence);
+  } else if (state.hasLatest) {
+    Serial.printf("Startup sequence %lu is ahead of backend sequence %lu; preserving local value\n",
+                  sequenceNumber, state.latestSequence);
+  } else {
+    Serial.printf("No accepted backend reading; using configured sequence %lu\n",
+                  sequenceNumber);
+  }
+}
+
 int postPacket(PendingPacket &packet) {
   packetsAttempted++;
   if (!connectWiFi()) return -1;
@@ -190,6 +332,7 @@ int postPacket(PendingPacket &packet) {
   int status = https.POST(packet.json);
   String response = https.getString();
   https.end();
+  lastResponse = response;
   Serial.printf("HTTPS status=%d response=%s\n", status, response.c_str());
   if (status >= 200 && status < 300) {
     packetsDelivered++;
@@ -209,6 +352,59 @@ int postPacket(PendingPacket &packet) {
   return status;
 }
 
+bool reconcileConflict(PendingPacket &packet) {
+  String classification = jsonValue(lastResponse, "classification");
+  if (classification != "duplicate" && classification != "stale") {
+    blockedPackets++;
+    lastError = "409 conflict is not duplicate/stale; packet retained";
+    reportStatus("409 conflict requires manual inspection; packet retained");
+    return false;
+  }
+  BackendStationState state;
+  if (!getStationState(state)) {
+    lastError = "409 reconciliation GET failed; packet retained";
+    reportStatus("409 reconciliation unavailable; packet retained");
+    return false;
+  }
+  if (!state.receiverConnected) {
+    lastError = "receiver disconnected during 409 reconciliation";
+    reportStatus("Receiver disconnected; packet retained for retry");
+    return false;
+  }
+  if (!state.hasLatest) {
+    blockedPackets++;
+    lastError = "409 reconciliation returned no accepted reading";
+    reportStatus("No backend reading to reconcile; packet retained");
+    return false;
+  }
+  if (packet.sequence == state.latestSequence &&
+      readingsMatch(packet.json, state.latestReading)) {
+    alreadyDeliveredPackets++;
+    lastDelivery = String(millis());
+    lastError = "packet already delivered";
+    reportStatus("Packet already delivered; removing matching duplicate");
+    return true;
+  }
+  if (packet.sequence < state.latestSequence) {
+    supersededPackets++;
+    lastError = "packet superseded by newer backend sequence";
+    Serial.printf("WARNING: superseded packet seq=%lu backend_seq=%lu; removing from queue\n",
+                  packet.sequence, state.latestSequence);
+    reportStatus("Superseded packet recorded and removed");
+    return true;
+  }
+  if (packet.sequence == state.latestSequence) {
+    blockedPackets++;
+    lastError = "sequence reuse conflict with different reading";
+    reportStatus("Sequence reuse conflict; packet retained for manual resolution");
+    return false;
+  }
+  blockedPackets++;
+  lastError = "pending sequence is newer than backend sequence";
+  reportStatus("Pending packet is newer; retaining unresolved conflict");
+  return false;
+}
+
 void flushQueue() {
   if (pendingCount == 0 || WiFi.status() != WL_CONNECTED) return;
   PendingPacket &packet = pending[pendingHead];
@@ -219,8 +415,10 @@ void flushQueue() {
     return;
   }
   if (status == 409) {
-    // The backend is authoritative. Keep the packet until a later manual
-    // review/restart rather than silently discarding an ambiguous response.
+    if (reconcileConflict(packet)) {
+      removeHeadPacket();
+      return;
+    }
     packet.retryDelay = min(packet.retryDelay * 2, RETRY_MAX_MS);
   } else {
     retryCount++;
@@ -257,6 +455,7 @@ void setup() {
                 HIMRAKSHAK_STATION_ID, HIMRAKSHAK_SCENARIO,
                 TELEMETRY_INTERVAL_MS / 1000);
   connectWiFi();
+  synchronizeStartupSequence();
 }
 
 void loop() {
