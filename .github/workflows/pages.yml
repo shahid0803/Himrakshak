@@ -12,6 +12,7 @@ concurrency:
 
 permissions:
   contents: read
+  pages: write
 
 jobs:
   build:
@@ -22,6 +23,8 @@ jobs:
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Build static publication artifact
         shell: bash
