@@ -1,0 +1,5 @@
+#pragma once
+
+#define HIMRAKSHAK_STATION_ID "HR-02"
+#define HIMRAKSHAK_SCENARIO "heavy_rain"
+#define HIMRAKSHAK_USE_SCENARIO_PRESET 1

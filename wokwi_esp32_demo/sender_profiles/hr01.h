@@ -1,0 +1,5 @@
+#pragma once
+
+#define HIMRAKSHAK_STATION_ID "HR-01"
+#define HIMRAKSHAK_SCENARIO "normal"
+#define HIMRAKSHAK_USE_SCENARIO_PRESET 0

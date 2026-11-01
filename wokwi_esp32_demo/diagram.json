@@ -29,6 +29,15 @@
       }
     },
     {
+      "type": "wokwi-potentiometer",
+      "id": "potBattery",
+      "top": 235,
+      "left": -100,
+      "attrs": {
+        "value": "335"
+      }
+    },
+    {
       "type": "wokwi-pushbutton",
       "id": "vibButton",
       "top": 195,
@@ -149,6 +158,30 @@
     [
       "potTilt:SIG",
       "esp:35",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potBattery:VCC",
+      "esp:3V3",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potBattery:GND",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potBattery:SIG",
+      "esp:32",
       "green",
       [
         "v0"

@@ -83,3 +83,7 @@ Use `himrakshak.schema.validate_reading(payload)`. It returns a normalized
 dictionary or raises `SchemaValidationError` with the invalid field named in
 the message. The validator only checks and normalizes readings; it does not
 generate readings or calculate risk.
+
+The Wokwi sender reads `battery_pct` from the dedicated third potentiometer in
+`wokwi_esp32_demo/diagram.json`; it does not silently substitute zero for a
+missing battery value.

@@ -1,4 +1,9 @@
-# HIMRAKSHAK — FINAL PROJECT HANDOVER (PHASE 11)
+# HIMRAKSHAK — FINAL PROJECT HANDOVER (PHASE 17)
+
+> Phase 12-17 additions are summarized in
+> [`HIMRAKSHAK_FINAL_RELEASE_REPORT.md`](HIMRAKSHAK_FINAL_RELEASE_REPORT.md).
+> Live Wokwi execution and cloud delivery remain manual checks; this document
+> does not claim physical hardware or LoRa validation.
 
 ## 1. Project Overview
 

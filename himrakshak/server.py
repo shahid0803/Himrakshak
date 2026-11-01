@@ -173,9 +173,14 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_error(self, status: int, message: str) -> None:
+    def _send_error(
+        self, status: int, message: str, details: Mapping[str, Any] | None = None
+    ) -> None:
         self._discard_request_body()
-        self._send_json(status, {"error": {"status": status, "message": message}})
+        error: dict[str, Any] = {"status": status, "message": message}
+        if details:
+            error.update(details)
+        self._send_json(status, {"error": error})
 
     def _send_rate_limit_error(self, station_id: str, retry_after: float) -> None:
         seconds = int(math.ceil(retry_after))
@@ -409,7 +414,17 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
                     return
                 result = self.manager.ingest(station_id, payload)
             self._send_json(HTTPStatus.OK, result)
-        except (StationDisconnectedError, StationSequenceConflictError) as exc:
+        except StationSequenceConflictError as exc:
+            self._send_error(
+                HTTPStatus.CONFLICT,
+                str(exc),
+                {
+                    "classification": exc.classification,
+                    "sequence": exc.sequence,
+                    "latest_sequence": exc.latest_sequence,
+                },
+            )
+        except StationDisconnectedError as exc:
             self._send_error(HTTPStatus.CONFLICT, str(exc))
         except (KeyError, SchemaValidationError, ValueError) as exc:
             self._send_error(
@@ -441,7 +456,17 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
                     return
                 result = self.manager.ingest(station_id, payload, "api reading")
             self._send_json(HTTPStatus.OK, result)
-        except (StationDisconnectedError, StationSequenceConflictError) as exc:
+        except StationSequenceConflictError as exc:
+            self._send_error(
+                HTTPStatus.CONFLICT,
+                str(exc),
+                {
+                    "classification": exc.classification,
+                    "sequence": exc.sequence,
+                    "latest_sequence": exc.latest_sequence,
+                },
+            )
+        except StationDisconnectedError as exc:
             self._send_error(HTTPStatus.CONFLICT, str(exc))
         except (SchemaValidationError, ValueError) as exc:
             self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
