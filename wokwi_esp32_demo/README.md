@@ -14,7 +14,9 @@ sensors.
 5. Turn the moisture, tilt, and battery potentiometers; press the blue button
    for a vibration burst.
 6. Wait at least 10 seconds between telemetry packets. The sketch connects to
-   `Wokwi-GUEST`, validates Render's Let's Encrypt root certificate, and POSTs
+   `Wokwi-GUEST`, validates the Google Trust Services GTS Root R4 certificate
+   used by Render's current chain, synchronizes NTP before its startup HTTPS
+   state read, and POSTs
    to `/api/stations/{station_id}/readings`.
 7. Observe HTTP status, sequence, queue depth, retries, and local indicators.
    The public dashboard refreshes accepted backend state every five seconds.
