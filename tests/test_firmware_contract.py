@@ -18,6 +18,15 @@ class FirmwareContractTests(unittest.TestCase):
             "#include <WiFiClientSecure.h>",
             "#include <HTTPClient.h>",
             "setCACert(HIMRAKSHAK_ROOT_CA)",
+            "configTime",
+            "synchronizeClock",
+            "synchronizeClock();\n  synchronizeStartupSequence();",
+            "TLS_HOST",
+            "diagnoseTransportFailure",
+            "DNS failure",
+            "TCP failure",
+            "TLS failure verifying",
+            "HTTP POST status",
             "WOKWI_SOFTWARE_SIMULATION",
             "/readings",
             "MAX_PENDING_PACKETS = 10",
@@ -27,6 +36,13 @@ class FirmwareContractTests(unittest.TestCase):
             self.assertIn(marker, source)
         self.assertNotIn("setInsecure", source)
         self.assertRegex(source, r"TELEMETRY_INTERVAL_MS\s*=\s*10000")
+
+    def test_firmware_embeds_the_verified_render_root(self):
+        root = (ROOT / "wokwi_esp32_demo" / "gts_root_r4.h").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("R1RTIFJvb3QgUjQ", root)
+        self.assertNotIn("ISRG Root X1", root)
 
     def test_firmware_reconciles_structured_409_conflicts(self):
         source = FIRMWARE.read_text(encoding="utf-8")

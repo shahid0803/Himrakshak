@@ -112,7 +112,7 @@ HimRakshak/
 └── wokwi_esp32_demo/
     ├── README.md
     ├── diagram.json
-    ├── isrg_root_x1.h
+    ├── gts_root_r4.h
     ├── station_config.h
     ├── sender_profiles/
     │   ├── hr01.h

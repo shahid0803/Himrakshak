@@ -27,7 +27,8 @@ with cloud state.
 ## Firmware
 
 `wokwi_esp32_demo/sketch.ino` now uses `WiFi.h`, `WiFiClientSecure`, and
-`HTTPClient`, a trusted ISRG Root X1 certificate, 10-second telemetry, valid
+`HTTPClient`, a trusted Google Trust Services GTS Root R4 certificate, 10-second
+telemetry, valid
 battery input from a dedicated potentiometer, local risk indicators, a
 10-packet FIFO, exponential retry backoff, and serial reliability telemetry.
 No administrative key or private credential is embedded.

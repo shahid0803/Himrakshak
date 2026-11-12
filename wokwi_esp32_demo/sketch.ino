@@ -9,10 +9,11 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <time.h>
 #include <math.h>
 #include <stdlib.h>
 
-#include "isrg_root_x1.h"
+#include "gts_root_r4.h"
 #include "station_config.h"
 
 const int MOISTURE_PIN = 34;
@@ -26,9 +27,11 @@ const int BUZZER_PIN = 23;
 
 const char *WIFI_SSID = "Wokwi-GUEST";
 const char *WIFI_PASSWORD = "";
+const char *TLS_HOST = "himrakshak.onrender.com";
 const char *INGEST_URL = "https://himrakshak.onrender.com/api/stations/";
 const unsigned long TELEMETRY_INTERVAL_MS = 10000;
 const unsigned long WIFI_TIMEOUT_MS = 15000;
+const unsigned long NTP_TIMEOUT_MS = 15000;
 const unsigned long RETRY_BASE_MS = 5000;
 const unsigned long RETRY_MAX_MS = 60000;
 const size_t MAX_PENDING_PACKETS = 10;
@@ -184,6 +187,26 @@ bool connectWiFi() {
   return false;
 }
 
+bool synchronizeClock() {
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  struct tm timeinfo;
+  unsigned long started = millis();
+  while (!getLocalTime(&timeinfo, 1000) &&
+         millis() - started < NTP_TIMEOUT_MS) {
+    delay(250);
+  }
+  if (getLocalTime(&timeinfo, 0)) {
+    Serial.printf("NTP synchronized: %04d-%02d-%02dT%02d:%02d:%02dZ\n",
+                  timeinfo.tm_year + 1900, timeinfo.tm_mon + 1,
+                  timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min,
+                  timeinfo.tm_sec);
+    return true;
+  }
+  lastError = "NTP synchronization timeout";
+  reportStatus("NTP unavailable; HTTPS will retain certificate verification");
+  return false;
+}
+
 String jsonValue(const String &json, const char *key) {
   String marker = String("\"") + key + "\"";
   int keyPos = json.indexOf(marker);
@@ -253,6 +276,40 @@ bool readingsMatch(const String &pendingJson, const String &backendReading) {
   return true;
 }
 
+void diagnoseTransportFailure() {
+  IPAddress address;
+  if (WiFi.hostByName(TLS_HOST, address) != 1) {
+    lastError = "DNS failure resolving " + String(TLS_HOST);
+    return;
+  }
+
+  WiFiClient tcp;
+  tcp.setTimeout(8000);
+  if (!tcp.connect(address, 443)) {
+    lastError = "TCP failure connecting " + address.toString() + ":443";
+    tcp.stop();
+    return;
+  }
+  tcp.stop();
+
+  WiFiClientSecure tls;
+  tls.setCACert(HIMRAKSHAK_ROOT_CA);
+  tls.setTimeout(8000);
+  if (!tls.connect(TLS_HOST, 443)) {
+    char detail[128] = {};
+    tls.lastError(detail, sizeof(detail));
+    lastError = "TLS failure verifying " + String(TLS_HOST);
+    if (detail[0] != '\0') {
+      lastError += ": ";
+      lastError += detail;
+    }
+    tls.stop();
+    return;
+  }
+  tls.stop();
+  lastError = "HTTPS request failed after DNS, TCP, and TLS succeeded";
+}
+
 bool getStationState(BackendStationState &state) {
   state = {false, true, false, 0, ""};
   if (!connectWiFi()) return false;
@@ -262,7 +319,10 @@ bool getStationState(BackendStationState &state) {
   HTTPClient https;
   String url = String(INGEST_URL) + HIMRAKSHAK_STATION_ID;
   if (!https.begin(client, url)) {
-    lastError = "HTTPS begin failed while reading station state";
+    diagnoseTransportFailure();
+    if (lastError.startsWith("HTTPS request")) {
+      lastError = "HTTP client begin failed while reading station state";
+    }
     return false;
   }
   https.setConnectTimeout(8000);
@@ -271,7 +331,11 @@ bool getStationState(BackendStationState &state) {
   String response = https.getString();
   https.end();
   if (status != 200) {
-    lastError = String("GET station state HTTP ") + status;
+    if (status < 0) {
+      diagnoseTransportFailure();
+    } else {
+      lastError = String("HTTP GET station state status ") + status;
+    }
     return false;
   }
   String station = jsonObjectValue(response, "station");
@@ -321,7 +385,10 @@ int postPacket(PendingPacket &packet) {
   HTTPClient https;
   String url = String(INGEST_URL) + HIMRAKSHAK_STATION_ID + "/readings";
   if (!https.begin(client, url)) {
-    lastError = "HTTPS begin failed";
+    diagnoseTransportFailure();
+    if (lastError.startsWith("HTTPS request")) {
+      lastError = "HTTP client begin failed";
+    }
     failedRequests++;
     return -1;
   }
@@ -345,9 +412,9 @@ int postPacket(PendingPacket &packet) {
   } else if (status == 429) {
     lastError = "429 rate limited";
   } else if (status > 0) {
-    lastError = String("HTTP ") + status;
+    lastError = String("HTTP POST status ") + status;
   } else {
-    lastError = "HTTPS request failed or timed out";
+    diagnoseTransportFailure();
   }
   return status;
 }
@@ -455,6 +522,7 @@ void setup() {
                 HIMRAKSHAK_STATION_ID, HIMRAKSHAK_SCENARIO,
                 TELEMETRY_INTERVAL_MS / 1000);
   connectWiFi();
+  synchronizeClock();
   synchronizeStartupSequence();
 }
 
