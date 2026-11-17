@@ -152,6 +152,12 @@ def validate_reading(payload: Mapping[str, Any]) -> dict[str, Any]:
     ):
         raise _error("transport", "must be a non-empty string when supplied")
 
+    # V2 adds a strict multi-parameter feature contract while retaining all
+    # seven V1 fields for backward-compatible stations and dashboards.
+    if "sensor_schema_version" in normalized:
+        from .v2_contract import validate_v2_fields
+        validate_v2_fields(normalized)
+
     normalized["node_id"] = node_id
     normalized["timestamp"] = normalized_timestamp
     return normalized

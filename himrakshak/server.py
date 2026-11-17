@@ -20,6 +20,8 @@ from .risk import MODEL_ID
 from .schema import SchemaValidationError
 from .data_intelligence.registry import registry_as_dict
 from .data_intelligence.storage import IntelligenceStore
+from .tinyml import FEATURES as TINYML_FEATURES
+from .v2_simulator import V2_SCENARIOS, make_v2_packet
 from .stations import (
     PendingQueueEmptyError,
     PendingQueueFullError,
@@ -138,6 +140,33 @@ class IngestionRateLimiter:
                     return max(0.01, retry_after)
             self._last_ingest_time[station_id] = now
             return None
+
+
+def _tinyml_model_metadata() -> dict[str, Any]:
+    metrics_path = PROJECT_ROOT / "models" / "training_metrics_v2.json"
+    if not metrics_path.is_file():
+        return {"status": "MODEL_ARTIFACT_MISSING", "model_id": None, "features": list(TINYML_FEATURES)}
+    try:
+        metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"status": "MODEL_ARTIFACT_INVALID", "model_id": None, "features": list(TINYML_FEATURES)}
+    return {
+        "status": "TRAINED_SYNTHETIC_DEMO_MODEL",
+        "model_id": metrics.get("model_id"),
+        "model_version": metrics.get("model_version"),
+        "model_type": "DecisionTreeClassifier",
+        "dataset_rows": metrics.get("dataset_rows"),
+        "train_rows": metrics.get("train_rows"),
+        "test_rows": metrics.get("test_rows"),
+        "model_sha256": metrics.get("model_sha256"),
+        "training_source": metrics.get("training_source"),
+        "field_validated": False,
+        "features": metrics.get("features", list(TINYML_FEATURES)),
+        "class_counts": metrics.get("class_counts", {}),
+        "selected_metrics": metrics.get("selected_metrics", {}),
+        "confusion_matrix": metrics.get("confusion_matrix", []),
+        "limitations": metrics.get("limitations", []),
+    }
 
 
 class HimRakshakHandler(BaseHTTPRequestHandler):
@@ -316,6 +345,22 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         self._discard_request_body()
         path = self._api_path()
+        if path == "/api/v2/model":
+            self._send_json(HTTPStatus.OK, _tinyml_model_metadata())
+            return
+        if path == "/api/v2/features":
+            self._send_json(HTTPStatus.OK, {
+                "sensor_schema_version": 2,
+                "features": list(TINYML_FEATURES),
+                "classes": {"0": "NORMAL", "1": "WARNING", "2": "CRITICAL"},
+                "environmental_groups": [
+                    "rainfall", "multi_depth_soil_moisture", "pore_water_pressure",
+                    "two_axis_tilt", "ground_displacement", "vibration", "soil_temperature", "groundwater",
+                ],
+                "device_health_separate": ["battery_pct", "sensor_health", "communication_state"],
+                "provenance": "Wokwi inputs include explicit derived simulation proxies.",
+            })
+            return
         if path == "/api/health":
             self._send_json(
                 HTTPStatus.OK,
@@ -327,6 +372,7 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
                     "illustrative": True,
                     "station_count": len(STATION_ROSTER),
                     "data_intelligence": "available",
+                    "tinyml_demo_model": _tinyml_model_metadata().get("status"),
                 },
             )
             return
@@ -363,10 +409,16 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
                         {
                             "model_type": "susceptibility",
                             "status": "NOT_TRAINABLE_DUE_TO_INSUFFICIENT_LABELS",
+                            "note": "Requires genuine spatial inventory labels and validation groups.",
                         },
                         {
                             "model_type": "early_warning",
                             "status": "NOT_TRAINABLE_DUE_TO_INSUFFICIENT_LABELS",
+                            "note": "Requires genuine timestamped event labels and aligned observations.",
+                        },
+                        {
+                            "model_type": "tinyml_virtual_demonstration",
+                            **_tinyml_model_metadata(),
                         },
                     ]
                 },
@@ -418,6 +470,37 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
             if not self._check_admin_auth():
                 return
             self._handle_fault(*fault)
+            return
+        if path == "/api/v2/demo":
+            if not self._check_admin_auth():
+                return
+            payload = self._read_json()
+            if payload is None:
+                return
+            station_id = payload.get("station_id", "HR-01")
+            scenario = payload.get("scenario", "normal")
+            if not isinstance(station_id, str) or not isinstance(scenario, str):
+                self._send_error(HTTPStatus.BAD_REQUEST, "station_id and scenario must be strings")
+                return
+            try:
+                station = self.manager.get(station_id)
+                retry_after = self.rate_limiter.check_and_record(station_id)
+                if retry_after is not None:
+                    self._send_rate_limit_error(station_id, retry_after)
+                    return
+                packet = make_v2_packet(station_id, station.next_sequence, scenario)
+                result = self.manager.ingest(station_id, packet, f"V2 demo scenario: {scenario}")
+                self._send_json(HTTPStatus.OK, result)
+            except KeyError as exc:
+                self._send_error(HTTPStatus.NOT_FOUND, str(exc))
+            except (ValueError, SchemaValidationError) as exc:
+                self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
+            except StationSequenceConflictError as exc:
+                self._send_error(HTTPStatus.CONFLICT, str(exc), {"classification": exc.classification})
+            except StationDisconnectedError as exc:
+                self._send_error(HTTPStatus.CONFLICT, str(exc))
+            except Exception:
+                self._send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "V2 demo scenario could not be processed")
             return
         station_id = self._station_id(path, "/simulate")
         operation = "simulate"
@@ -608,6 +691,12 @@ class HimRakshakServer(ThreadingHTTPServer):
         database_path = os.environ.get("HIMRAKSHAK_INTELLIGENCE_DB", ":memory:")
         self.intelligence_store = IntelligenceStore(database_path)
         super().__init__((self.config.host, self.config.port), HimRakshakHandler)
+
+    def server_close(self) -> None:
+        try:
+            super().server_close()
+        finally:
+            self.intelligence_store.close()
 
 
 def _build_parser() -> argparse.ArgumentParser:

@@ -1,0 +1,247 @@
+{
+  "candidate_models": [
+    {
+      "accuracy": 0.9883333333333333,
+      "critical_recall": 0.995,
+      "depth": 4,
+      "nodes": 19
+    },
+    {
+      "accuracy": 0.9883333333333333,
+      "critical_recall": 0.995,
+      "depth": 4,
+      "nodes": 19
+    },
+    {
+      "accuracy": 0.9883333333333333,
+      "critical_recall": 0.995,
+      "depth": 4,
+      "nodes": 19
+    }
+  ],
+  "class_counts": {
+    "0": 800,
+    "1": 800,
+    "2": 800
+  },
+  "class_names": {
+    "0": "NORMAL",
+    "1": "WARNING",
+    "2": "CRITICAL"
+  },
+  "classification_report": {
+    "CRITICAL": {
+      "f1-score": 0.9875930521091811,
+      "precision": 0.9802955665024631,
+      "recall": 0.995,
+      "support": 200.0
+    },
+    "NORMAL": {
+      "f1-score": 0.995,
+      "precision": 0.995,
+      "recall": 0.995,
+      "support": 200.0
+    },
+    "WARNING": {
+      "f1-score": 0.982367758186398,
+      "precision": 0.9898477157360406,
+      "recall": 0.975,
+      "support": 200.0
+    },
+    "accuracy": 0.9883333333333333,
+    "macro avg": {
+      "f1-score": 0.9883202700985264,
+      "precision": 0.9883810940795011,
+      "recall": 0.9883333333333333,
+      "support": 600.0
+    },
+    "weighted avg": {
+      "f1-score": 0.9883202700985263,
+      "precision": 0.9883810940795013,
+      "recall": 0.9883333333333333,
+      "support": 600.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      199,
+      1,
+      0
+    ],
+    [
+      1,
+      195,
+      4
+    ],
+    [
+      0,
+      1,
+      199
+    ]
+  ],
+  "dataset_rows": 2400,
+  "feature_names": [
+    "rainfall_intensity_mm_h",
+    "rainfall_1h_mm",
+    "rainfall_24h_mm",
+    "soil_moisture_surface_pct",
+    "soil_moisture_subsurface_pct",
+    "pore_water_pressure_kpa",
+    "tilt_x_deg",
+    "tilt_y_deg",
+    "tilt_rate_deg_per_h",
+    "ground_displacement_mm",
+    "ground_displacement_rate_mm_per_h",
+    "vibration_rms_g",
+    "vibration_peak_g",
+    "vibration_dominant_hz",
+    "soil_temperature_c",
+    "groundwater_depth_m"
+  ],
+  "features": [
+    "rainfall_intensity_mm_h",
+    "rainfall_1h_mm",
+    "rainfall_24h_mm",
+    "soil_moisture_surface_pct",
+    "soil_moisture_subsurface_pct",
+    "pore_water_pressure_kpa",
+    "tilt_x_deg",
+    "tilt_y_deg",
+    "tilt_rate_deg_per_h",
+    "ground_displacement_mm",
+    "ground_displacement_rate_mm_per_h",
+    "vibration_rms_g",
+    "vibration_peak_g",
+    "vibration_dominant_hz",
+    "soil_temperature_c",
+    "groundwater_depth_m"
+  ],
+  "field_validated": false,
+  "limitations": [
+    "Synthetic scenario labels are generated from illustrative prototype rules.",
+    "Metrics measure agreement with synthetic labels, not real landslide prediction accuracy.",
+    "Soil temperature, groundwater and some motion/vibration fields are virtual or derived demonstration proxies in Wokwi."
+  ],
+  "model_id": "himrakshak-synthetic-demo-tree-v2",
+  "model_sha256": "8a367c119bd164990705ff384d0e679ef30bf23ab472cbbf8db1fceedf6654db",
+  "model_type": "DecisionTreeClassifier",
+  "model_version": "2.0.0-demo-synthetic",
+  "selected_metrics": {
+    "accuracy": 0.9883333333333333,
+    "critical_recall": 0.995,
+    "depth": 4,
+    "nodes": 19
+  },
+  "sklearn_version": "1.9.1",
+  "test_rows": 600,
+  "train_rows": 1800,
+  "trained_at": "2026-11-17T11:40:30.685440Z",
+  "training_source": "synthetic_demonstration_scenarios_only",
+  "tree": {
+    "children_left": [
+      1,
+      2,
+      3,
+      4,
+      -1,
+      -1,
+      7,
+      -1,
+      -1,
+      10,
+      11,
+      -1,
+      -1,
+      14,
+      -1,
+      -1,
+      17,
+      -1,
+      -1
+    ],
+    "children_right": [
+      16,
+      9,
+      6,
+      5,
+      -1,
+      -1,
+      8,
+      -1,
+      -1,
+      13,
+      12,
+      -1,
+      -1,
+      15,
+      -1,
+      -1,
+      18,
+      -1,
+      -1
+    ],
+    "class": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "feature": [
+      10,
+      11,
+      9,
+      12,
+      -2,
+      -2,
+      0,
+      -2,
+      -2,
+      8,
+      2,
+      -2,
+      -2,
+      5,
+      -2,
+      -2,
+      10,
+      -2,
+      -2
+    ],
+    "threshold": [
+      1.91501999,
+      0.20161,
+      10.91171503,
+      0.54822502,
+      0.0,
+      0.0,
+      51.02791023,
+      0.0,
+      0.0,
+      1.75431001,
+      117.41828537,
+      0.0,
+      0.0,
+      101.67531586,
+      0.0,
+      0.0,
+      2.03497493,
+      0.0,
+      0.0
+    ]
+  }
+}

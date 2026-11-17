@@ -107,7 +107,7 @@ class FirmwareContractTests(unittest.TestCase):
         packet_function = packet_function.split("void reportStatus", 1)[0]
         self.assertNotIn("readSensors(", packet_function)
         self.assertIn("frame.moisture", packet_function)
-        self.assertIn("frame.tiltDeg", packet_function)
+        self.assertIn("frame.tiltXDeg", packet_function)
 
     def test_startup_wifi_and_ntp_waits_are_non_blocking(self):
         wifi_function = self.source.split("bool connectWiFi()", 1)[1]
@@ -136,14 +136,37 @@ class FirmwareContractTests(unittest.TestCase):
             self.assertIn(f'"{station}"', profile)
             self.assertIn(f'"{scenario}"', profile)
 
-    def test_wokwi_diagram_is_valid_and_has_battery_input(self):
+    def test_wokwi_diagram_has_expanded_adc1_virtual_inputs(self):
         diagram = json.loads(DIAGRAM.read_text(encoding="utf-8"))
         parts = {part["id"] for part in diagram["parts"]}
-        self.assertIn("potBattery", parts)
-        connections = {
-            tuple(connection[:2]) for connection in diagram["connections"]
+        for part_id in ("potRain", "potMoist", "potSubsoil", "potTilt", "potPore", "potTemp"):
+            self.assertIn(part_id, parts)
+        connections = {tuple(connection[:2]) for connection in diagram["connections"]}
+        expected = {
+            ("potRain:SIG", "esp:33"),
+            ("potMoist:SIG", "esp:34"),
+            ("potTilt:SIG", "esp:35"),
+            ("potTemp:SIG", "esp:32"),
+            ("potSubsoil:SIG", "esp:36"),
+            ("potPore:SIG", "esp:39"),
         }
-        self.assertIn(("potBattery:SIG", "esp:32"), connections)
+        self.assertTrue(expected.issubset(connections))
+        # ADC1 inputs are retained to avoid the ESP32 ADC2/Wi-Fi conflict.
+        self.assertIn("HIMRAKSHAK_DEMO_BATTERY_PCT", (ROOT / "wokwi_esp32_demo" / "station_config.h").read_text(encoding="utf-8"))
+
+
+    def test_heavy_rain_station_uses_explicit_synthetic_warning_trend(self):
+        text = (ROOT / "wokwi_esp32_demo" / "sketch.ino").read_text(encoding="utf-8")
+        self.assertIn('strcmp(HIMRAKSHAK_SCENARIO, "heavy_rain") == 0', text)
+        self.assertIn("max(frame.tiltRateDegPerHour, 1.2f)", text)
+        self.assertIn("max(frame.groundDisplacementRateMmPerHour, 0.84f)", text)
+        self.assertIn("frame.tiltDeg = max(frame.tiltDeg, 6.5f)", text)
+        self.assertIn("not measured movement rates", text)
+
+    def test_derived_rates_use_the_same_accelerated_demo_clock_as_rainfall(self):
+        text = (ROOT / "wokwi_esp32_demo" / "sketch.ino").read_text(encoding="utf-8")
+        self.assertIn("now - previousDerivedSampleAt) / 60000.0f", text)
+        self.assertIn("one real second represents one simulated minute", text.lower())
 
 
 if __name__ == "__main__":

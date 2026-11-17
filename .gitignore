@@ -39,6 +39,7 @@ HimRakshak-OpenCode/
 *.key
 *.p12
 *.sqlite
+*.sqlite3
 *.db
 
 # Downloaded real-data inputs and derived files
@@ -46,3 +47,4 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+!data/processed/himrakshak_synthetic_v2.csv

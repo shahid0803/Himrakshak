@@ -16,11 +16,16 @@
 
 #include "gts_root_r4.h"
 #include "station_config.h"
+#include "HimRakshakModel.h"
 
-const int MOISTURE_PIN = 34;
-const int TILT_PIN = 35;
-const int BATTERY_PIN = 32;
-const int VIBRATION_PIN = 18;
+// ADC1 pins remain available while Wi-Fi is active.
+const int RAINFALL_PIN = 33;
+const int MOISTURE_PIN = 34;          // surface moisture
+const int TILT_PIN = 35;              // primary tilt axis
+const int SOIL_TEMPERATURE_PIN = 32; // virtual soil-temperature input
+const int SUBSURFACE_MOISTURE_PIN = 36;
+const int PORE_PRESSURE_PIN = 39;
+const int VIBRATION_PIN = 18;          // discrete virtual event button
 const int GREEN_LED = 25;
 const int YELLOW_LED = 26;
 const int RED_LED = 27;
@@ -47,6 +52,8 @@ const size_t MAX_PENDING_PACKETS = 10;
 struct Assessment {
   int score;
   const char *level;
+  int tinymlPrediction;
+  bool tinymlReady;
 };
 
 // Environmental risk and network health are deliberately separate states.
@@ -68,17 +75,37 @@ enum CommunicationState {
 // COMMUNICATION_DEGRADED is transport health only, never a risk-controller state.
 
 struct SensorFrame {
+  // Legacy compatibility fields retained for V1 readers.
   int moisture;
   float tiltDeg;
   int vibration;
   int battery;
   bool healthy;
+
+  // Eight environmental parameter groups (virtual/demo provenance is explicit).
+  float rainfallIntensityMmH;
+  float rainfall1hMm;
+  float rainfall24hMm;
+  float subsurfaceMoisturePct;
+  float porePressureKpa;
+  float tiltXDeg;
+  float tiltYDeg;
+  float tiltRateDegPerHour;
+  float groundDisplacementMm;
+  float groundDisplacementRateMmPerHour;
+  float vibrationRmsG;
+  float vibrationPeakG;
+  float vibrationDominantHz;
+  float soilTemperatureC;
+  float groundwaterDepthM;
+  bool rainfallHistoryValid;
+  bool groundwaterValid;
 };
 
 ControllerState controllerState = BOOT;
 ControllerState previousState = BOOT;
 CommunicationState communicationState = COMMUNICATION_UNKNOWN;
-SensorFrame filteredFrame = {0, 0.0f, 0, 0, false};
+SensorFrame filteredFrame = {};
 unsigned long lastSensorSample = 0;
 unsigned long lastDiagnosticLog = 0;
 unsigned long recoveryUntil = 0;
@@ -130,92 +157,268 @@ struct BackendStationState {
   String latestReading;
 };
 
-Assessment assessRisk(int moisture, float tiltDeg, int vibration) {
-  float moisturePart = max(0.0f, (moisture - 45.0f) / 55.0f) * 35.0f;
-  float tiltPart = max(0.0f, (tiltDeg - 2.0f) / 10.0f) * 45.0f;
-  float vibrationPart = max(0.0f, (vibration - 25.0f) / 75.0f) * 20.0f;
-  int score = (int)constrain(round(moisturePart + tiltPart + vibrationPart), 0, 100);
-  const char *level = "NORMAL";
-  if (tiltDeg >= 8.0f || (moisture >= 75 && tiltDeg >= 4.0f) || score >= 55) {
-    level = "CRITICAL";
-  } else if (moisture >= 60 || tiltDeg >= 4.0f || vibration >= 65 || score >= 25) {
-    level = "WARNING";
-  }
-  return {score, level};
-}
+// Accelerated, synthetic rolling history: one real second represents one
+// simulated minute. Seed values are for Wokwi demonstration only.
+float rainfallMinuteBuckets[60] = {};
+float rainfallHourBuckets[24] = {};
+size_t rainfallMinuteIndex = 0;
+size_t rainfallHourIndex = 0;
+unsigned int rainfallMinuteCount = 0;
+float rainfallCurrentHourMm = 0.0f;
+unsigned long rainfallLastTick = 0;
+bool rainfallHistorySeeded = false;
+float previousTiltForRate = 0.0f;
+float previousDisplacementForRate = 0.0f;
+unsigned long previousDerivedSampleAt = 0;
+float smoothedTiltRate = 0.0f;
+float smoothedDisplacementRate = 0.0f;
 
 bool validAdc(int value) {
-  // ESP32 analogRead() is expected to return a 12-bit value.
-  // The full 0..4095 range is valid for a potentiometer at either endpoint.
   return value >= ADC_MIN_VALID && value <= ADC_MAX_VALID;
 }
 
-void readSensors(int &moisture, float &tiltDeg, int &vibration, int &battery) {
-  int moistureRaw = analogRead(MOISTURE_PIN);
-  int tiltRaw = analogRead(TILT_PIN);
-  int batteryRaw = analogRead(BATTERY_PIN);
+float sumBuckets(const float *values, size_t count) {
+  float total = 0.0f;
+  for (size_t index = 0; index < count; ++index) total += values[index];
+  return total;
+}
 
-  bool healthy = validAdc(moistureRaw) &&
-                 validAdc(tiltRaw) &&
-                 validAdc(batteryRaw);
+void seedRainfallHistory() {
+  float minuteSeed = 0.035f;
+  float hourSeed = 2.1f;
+  if (strcmp(HIMRAKSHAK_SCENARIO, "heavy_rain") == 0) {
+    // Synthetic HR-02 history: approximately 14.7 mm in the seeded hour
+    // window and 103.6 mm across the seeded 24-hour window.
+    minuteSeed = 0.24535f;
+    hourSeed = 4.3147f;
+  } else if (strcmp(HIMRAKSHAK_SCENARIO, "slope_shift") == 0) {
+    minuteSeed = 0.13f;
+    hourSeed = 7.8f;
+  }
+  for (size_t index = 0; index < 60; ++index) rainfallMinuteBuckets[index] = minuteSeed;
+  for (size_t index = 0; index < 24; ++index) rainfallHourBuckets[index] = hourSeed;
+  rainfallMinuteIndex = 0;
+  rainfallHourIndex = 0;
+  rainfallMinuteCount = 0;
+  rainfallCurrentHourMm = 0.0f;
+  rainfallLastTick = millis();
+  rainfallHistorySeeded = true;
+}
 
+void updateRainfallHistory(float rainfallIntensityMmH) {
+  if (!rainfallHistorySeeded) seedRainfallHistory();
+  unsigned long now = millis();
+  // Catch up at most 60 ticks after a scheduling pause; avoid an unbounded loop.
+  unsigned int catchup = 0;
+  while (now - rainfallLastTick >= 1000 && catchup < 60) {
+    rainfallLastTick += 1000;
+    const float simulatedMinuteDepth = max(0.0f, rainfallIntensityMmH) / 60.0f;
+    rainfallMinuteBuckets[rainfallMinuteIndex] = simulatedMinuteDepth;
+    rainfallMinuteIndex = (rainfallMinuteIndex + 1) % 60;
+    rainfallCurrentHourMm += simulatedMinuteDepth;
+    rainfallMinuteCount++;
+    if (rainfallMinuteCount >= 60) {
+      rainfallHourBuckets[rainfallHourIndex] = rainfallCurrentHourMm;
+      rainfallHourIndex = (rainfallHourIndex + 1) % 24;
+      rainfallMinuteCount = 0;
+      rainfallCurrentHourMm = 0.0f;
+    }
+    catchup++;
+  }
+}
+
+void readSensors(SensorFrame &frame) {
+  const int rainRaw = analogRead(RAINFALL_PIN);
+  const int moistureRaw = analogRead(MOISTURE_PIN);
+  const int tiltRaw = analogRead(TILT_PIN);
+  const int soilTempRaw = analogRead(SOIL_TEMPERATURE_PIN);
+  const int subsurfaceRaw = analogRead(SUBSURFACE_MOISTURE_PIN);
+  const int poreRaw = analogRead(PORE_PRESSURE_PIN);
+
+  bool healthy = validAdc(rainRaw) && validAdc(moistureRaw) &&
+                 validAdc(tiltRaw) && validAdc(soilTempRaw) &&
+                 validAdc(subsurfaceRaw) && validAdc(poreRaw);
 #if HIMRAKSHAK_SIMULATE_SENSOR_FAULT
   healthy = false;
 #endif
 
-  moisture = map(constrain(moistureRaw, 0, 4095), 0, 4095, 0, 100);
-  tiltDeg = map(constrain(tiltRaw, 0, 4095), 0, 4095, 0, 150) / 10.0f;
-  battery = map(constrain(batteryRaw, 0, 4095), 0, 4095, 0, 100);
-
-  // The pushbutton represents a discrete vibration event. Keep this input
-  // responsive instead of smoothing away a short button press.
-  vibration = (digitalRead(VIBRATION_PIN) == LOW) ? 85 : 12;
+  frame.rainfallIntensityMmH = map(constrain(rainRaw, 0, 4095), 0, 4095, 0, 800) / 10.0f;
+  frame.moisture = map(constrain(moistureRaw, 0, 4095), 0, 4095, 0, 100);
+  frame.tiltDeg = map(constrain(tiltRaw, 0, 4095), 0, 4095, 0, 150) / 10.0f;
+  frame.battery = HIMRAKSHAK_DEMO_BATTERY_PCT;
+  frame.subsurfaceMoisturePct = map(constrain(subsurfaceRaw, 0, 4095), 0, 4095, 0, 100);
+  frame.porePressureKpa = map(constrain(poreRaw, 0, 4095), 0, 4095, 0, 160);
 
 #if HIMRAKSHAK_USE_SCENARIO_PRESET
   if (strcmp(HIMRAKSHAK_SCENARIO, "heavy_rain") == 0) {
-    moisture = max(moisture, 78);
-    tiltDeg = max(tiltDeg, 4.5f);
-    vibration = max(vibration, 30);
+    frame.rainfallIntensityMmH = max(frame.rainfallIntensityMmH, 46.73f);
+    frame.moisture = max(frame.moisture, 71);
+    frame.subsurfaceMoisturePct = max(frame.subsurfaceMoisturePct, 55.4f);
+    frame.porePressureKpa = max(frame.porePressureKpa, 72.8f);
+    frame.tiltDeg = max(frame.tiltDeg, 6.5f);
   } else if (strcmp(HIMRAKSHAK_SCENARIO, "slope_shift") == 0) {
-    moisture = max(moisture, 70);
-    tiltDeg = max(tiltDeg, 9.0f);
-    vibration = max(vibration, 55);
-  } else if (strcmp(HIMRAKSHAK_SCENARIO, "vibration_burst") == 0) {
-    vibration = max(vibration, 88);
+    frame.rainfallIntensityMmH = max(frame.rainfallIntensityMmH, 32.0f);
+    frame.moisture = max(frame.moisture, 72);
+    frame.subsurfaceMoisturePct = max(frame.subsurfaceMoisturePct, 83.0f);
+    frame.porePressureKpa = max(frame.porePressureKpa, 118.0f);
+    frame.tiltDeg = max(frame.tiltDeg, 9.0f);
   }
 #endif
 
+  // Virtual vibration event template. This is a button-driven event proxy,
+  // not an accelerometer measurement or an FFT result.
+  frame.vibration = (digitalRead(VIBRATION_PIN) == LOW) ? 85 : 12;
+  frame.vibrationRmsG = (frame.vibration > 50) ? 0.48f : 0.02f;
+  frame.vibrationPeakG = (frame.vibration > 50) ? 1.05f : 0.04f;
+  frame.vibrationDominantHz = (frame.vibration > 50) ? 12.0f : 1.0f;
+
+  updateRainfallHistory(frame.rainfallIntensityMmH);
+  frame.rainfall1hMm = sumBuckets(rainfallMinuteBuckets, 60);
+  frame.rainfall24hMm = sumBuckets(rainfallHourBuckets, 24);
+  frame.rainfallHistoryValid = rainfallHistorySeeded;
+
+  frame.tiltXDeg = frame.tiltDeg;
+  // Secondary axis is a documented synthetic cross-axis proxy; no second
+  // physical inclinometer channel is installed in this virtual circuit.
+  frame.tiltYDeg = frame.tiltXDeg * 0.22f;
+  const unsigned long now = millis();
+  // One real second represents one simulated minute for this virtual demo.
+  // Convert elapsed wall-clock milliseconds into accelerated simulated hours
+  // so the reported deg/hour and mm/hour rates use the same demo time base as
+  // the seeded rainfall-history windows.
+  const float elapsedHours = previousDerivedSampleAt == 0 ? 0.0f :
+      max(0.001f, (now - previousDerivedSampleAt) / 60000.0f);
+  if (previousDerivedSampleAt != 0) {
+    const float rawTiltRate = (frame.tiltXDeg - previousTiltForRate) / elapsedHours;
+    smoothedTiltRate = 0.25f * rawTiltRate + 0.75f * smoothedTiltRate;
+    const float leverArmMm = 100.0f;
+    frame.groundDisplacementMm = sin(frame.tiltXDeg * PI / 180.0f) * leverArmMm;
+    const float rawDisplacementRate =
+        fabs(frame.groundDisplacementMm - previousDisplacementForRate) / elapsedHours;
+    smoothedDisplacementRate = 0.2f * rawDisplacementRate + 0.8f * smoothedDisplacementRate;
+  } else {
+    frame.groundDisplacementMm = sin(frame.tiltXDeg * PI / 180.0f) * 100.0f;
+  }
+  frame.tiltRateDegPerHour = constrain(smoothedTiltRate, -12.0f, 12.0f);
+  frame.groundDisplacementRateMmPerHour = constrain(smoothedDisplacementRate, 0.0f, 12.0f);
+#if HIMRAKSHAK_USE_SCENARIO_PRESET
+  // HR-02 is a synthetic heavy-rain trend scenario. These preset rates make
+  // the demonstration profile exercise WARNING in both rule and TinyML paths
+  // before a user manually changes the virtual tilt potentiometer. These are
+  // synthetic preset values, not measured movement rates.
+  if (strcmp(HIMRAKSHAK_SCENARIO, "heavy_rain") == 0) {
+    frame.tiltRateDegPerHour = max(frame.tiltRateDegPerHour, 1.2f);
+    frame.groundDisplacementRateMmPerHour =
+        max(frame.groundDisplacementRateMmPerHour, 0.84f);
+  }
+#endif
+  previousTiltForRate = frame.tiltXDeg;
+  previousDisplacementForRate = frame.groundDisplacementMm;
+  previousDerivedSampleAt = now;
+
+  // Soil temperature is a station-profile proxy driven by a virtual analog
+  // potentiometer on GPIO32; it is not a calibrated DS18B20 measurement.
+  frame.soilTemperatureC = map(constrain(soilTempRaw, 0, 4095), 0, 4095, -50, 350) / 10.0f;
+  // Battery remains a separate fixed device-health demonstration estimate.
+  // Groundwater depth is a transparent demo proxy derived from pore pressure
+  // and subsurface moisture, not a direct water-level instrument reading.
+  frame.groundwaterDepthM = constrain(
+      9.0f - frame.porePressureKpa * 0.032f - frame.subsurfaceMoisturePct * 0.018f,
+      0.3f, 10.0f);
+  frame.groundwaterValid = true;
+  frame.healthy = healthy;
   sensorReadHealthy = healthy;
 }
 
+void makeTinyMlFeatures(const SensorFrame &frame, float features[16]) {
+  features[0] = frame.rainfallIntensityMmH;
+  features[1] = frame.rainfall1hMm;
+  features[2] = frame.rainfall24hMm;
+  features[3] = frame.moisture;
+  features[4] = frame.subsurfaceMoisturePct;
+  features[5] = frame.porePressureKpa;
+  features[6] = frame.tiltXDeg;
+  features[7] = frame.tiltYDeg;
+  features[8] = frame.tiltRateDegPerHour;
+  features[9] = frame.groundDisplacementMm;
+  features[10] = frame.groundDisplacementRateMmPerHour;
+  features[11] = frame.vibrationRmsG;
+  features[12] = frame.vibrationPeakG;
+  features[13] = frame.vibrationDominantHz;
+  features[14] = frame.soilTemperatureC;
+  features[15] = frame.groundwaterDepthM;
+}
+
+Assessment assessRisk(const SensorFrame &frame, int tinymlPrediction) {
+  float scoreRaw =
+      constrain(frame.rainfall24hMm / 220.0f, 0.0f, 1.0f) * 16.0f +
+      constrain(frame.subsurfaceMoisturePct / 100.0f, 0.0f, 1.0f) * 12.0f +
+      constrain(frame.porePressureKpa / 160.0f, 0.0f, 1.0f) * 18.0f +
+      constrain(fabs(frame.tiltXDeg) / 15.0f, 0.0f, 1.0f) * 18.0f +
+      constrain(frame.groundDisplacementRateMmPerHour / 8.0f, 0.0f, 1.0f) * 18.0f +
+      constrain(frame.vibrationPeakG / 3.5f, 0.0f, 1.0f) * 8.0f +
+      (1.0f - constrain(frame.groundwaterDepthM / 10.0f, 0.0f, 1.0f)) * 10.0f;
+  int score = (int)constrain(round(scoreRaw), 0, 100);
+
+  bool criticalRule = frame.tiltXDeg >= 8.5f ||
+      frame.groundDisplacementRateMmPerHour >= 2.2f ||
+      (frame.porePressureKpa >= 108.0f && frame.subsurfaceMoisturePct >= 72.0f) ||
+      (frame.rainfall24hMm >= 145.0f && frame.moisture >= 72 && frame.porePressureKpa >= 82.0f) ||
+      (frame.tiltRateDegPerHour >= 1.8f && frame.porePressureKpa >= 78.0f);
+  bool warningRule =
+      (frame.rainfall24hMm >= 65.0f && frame.moisture >= 54) ||
+      frame.porePressureKpa >= 66.0f || frame.tiltXDeg >= 4.1f ||
+      frame.groundDisplacementRateMmPerHour >= 0.55f ||
+      frame.vibrationPeakG >= 0.95f || frame.groundwaterDepthM <= 1.8f ||
+      frame.rainfallIntensityMmH >= 35.0f;
+
+  int ruleClass = criticalRule ? 2 : (warningRule ? 1 : 0);
+  // Conservative fusion: the ML model may raise severity, but never lowers
+  // a rule-based warning/critical safety state.
+  int finalClass = max(ruleClass, tinymlPrediction >= 0 ? tinymlPrediction : 0);
+  const char *level = finalClass == 2 ? "CRITICAL" : (finalClass == 1 ? "WARNING" : "NORMAL");
+  return {score, level, tinymlPrediction,
+          frame.healthy && frame.rainfallHistoryValid && frame.groundwaterValid};
+}
+
 SensorFrame acquireFilteredSensors() {
-  unsigned long now = millis();
-  if (sensorFilterInitialized &&
-      now - lastSensorSample < SENSOR_SAMPLE_INTERVAL_MS) {
+  const unsigned long now = millis();
+  if (sensorFilterInitialized && now - lastSensorSample < SENSOR_SAMPLE_INTERVAL_MS) {
     return filteredFrame;
   }
-
-  int moisture;
-  float tiltDeg;
-  int vibration;
-  int battery;
-  readSensors(moisture, tiltDeg, vibration, battery);
-
+  SensorFrame raw = {};
+  readSensors(raw);
   if (!sensorFilterInitialized) {
-    filteredFrame = {moisture, tiltDeg, vibration, battery, sensorReadHealthy};
+    filteredFrame = raw;
     sensorFilterInitialized = true;
   } else {
-    filteredFrame.moisture = (int)round(
-        FILTER_ALPHA * moisture + (1.0f - FILTER_ALPHA) * filteredFrame.moisture);
-    filteredFrame.tiltDeg = FILTER_ALPHA * tiltDeg +
-                            (1.0f - FILTER_ALPHA) * filteredFrame.tiltDeg;
-    filteredFrame.battery = (int)round(
-        FILTER_ALPHA * battery + (1.0f - FILTER_ALPHA) * filteredFrame.battery);
-    // Preserve the discrete vibration event from this sample.
-    filteredFrame.vibration = vibration;
-    filteredFrame.healthy = sensorReadHealthy;
+    #define BLEND_FIELD(field) filteredFrame.field = FILTER_ALPHA * raw.field + (1.0f - FILTER_ALPHA) * filteredFrame.field
+    BLEND_FIELD(rainfallIntensityMmH);
+    BLEND_FIELD(moisture);
+    BLEND_FIELD(tiltDeg);
+    BLEND_FIELD(battery);
+    BLEND_FIELD(subsurfaceMoisturePct);
+    BLEND_FIELD(porePressureKpa);
+    BLEND_FIELD(soilTemperatureC);
+    BLEND_FIELD(groundwaterDepthM);
+    BLEND_FIELD(rainfall1hMm);
+    BLEND_FIELD(rainfall24hMm);
+    BLEND_FIELD(tiltXDeg);
+    BLEND_FIELD(tiltYDeg);
+    BLEND_FIELD(tiltRateDegPerHour);
+    BLEND_FIELD(groundDisplacementMm);
+    BLEND_FIELD(groundDisplacementRateMmPerHour);
+    BLEND_FIELD(vibrationRmsG);
+    BLEND_FIELD(vibrationPeakG);
+    BLEND_FIELD(vibrationDominantHz);
+    #undef BLEND_FIELD
+    filteredFrame.moisture = (int)round(filteredFrame.moisture);
+    filteredFrame.vibration = raw.vibration; // event input must remain responsive
+    filteredFrame.healthy = raw.healthy;
+    filteredFrame.rainfallHistoryValid = raw.rainfallHistoryValid;
+    filteredFrame.groundwaterValid = raw.groundwaterValid;
   }
-
+  filteredFrame.tiltDeg = filteredFrame.tiltXDeg;
   lastSensorSample = now;
   return filteredFrame;
 }
@@ -243,31 +446,24 @@ const char *communicationStateName(CommunicationState state) {
 }
 
 ControllerState evaluateState(const SensorFrame &frame, const Assessment &assessment) {
-  if (!frame.healthy) {
-    // Do not cancel an already active critical alarm because a sensor fails.
+  if (!frame.healthy || !frame.rainfallHistoryValid || !frame.groundwaterValid) {
     return controllerState == CRITICAL ? CRITICAL : SENSOR_FAULT;
   }
-
-  // Critical entry is immediate. Critical hold is evaluated BEFORE WARNING,
-  // so a small decrease cannot prematurely downgrade a critical condition.
   if (strcmp(assessment.level, "CRITICAL") == 0) return CRITICAL;
   if (controllerState == CRITICAL &&
-      (frame.moisture >= 70 || frame.tiltDeg >= 7.0f ||
-       frame.vibration >= 75 || assessment.score >= 45)) {
+      (frame.tiltXDeg >= 7.0f || frame.porePressureKpa >= 95.0f ||
+       frame.groundDisplacementRateMmPerHour >= 1.6f || assessment.score >= 45)) {
     return CRITICAL;
   }
-
   if (strcmp(assessment.level, "WARNING") == 0) return WARNING;
   if (controllerState == WARNING &&
-      (frame.moisture >= 55 || frame.tiltDeg >= 3.5f ||
-       frame.vibration >= 55 || assessment.score >= 20)) {
+      (frame.moisture >= 55 || frame.subsurfaceMoisturePct >= 58.0f ||
+       frame.porePressureKpa >= 55.0f || frame.tiltXDeg >= 3.5f ||
+       assessment.score >= 20)) {
     return WARNING;
   }
-
   if (controllerState == SENSOR_FAULT) return RECOVERY;
-  if (controllerState == RECOVERY && (long)(millis() - recoveryUntil) < 0) {
-    return RECOVERY;
-  }
+  if (controllerState == RECOVERY && (long)(millis() - recoveryUntil) < 0) return RECOVERY;
   return NORMAL;
 }
 
@@ -281,11 +477,19 @@ void transitionState(ControllerState next) {
 }
 
 void reportDecision(const SensorFrame &frame, const Assessment &assessment) {
-  Serial.printf("[EDGE PROCESSING] rule_based_score=%d level=%s\n",
-                assessment.score, assessment.level);
-  Serial.printf("[DECISION ENGINE] reasons=moisture:%d tilt:%.1f vibration:%d battery:%d health:%s\n",
-                frame.moisture, frame.tiltDeg, frame.vibration, frame.battery,
-                frame.healthy ? "ok" : "fault");
+  Serial.printf("[EDGE PROCESSING] score=%d rule+tinyml_level=%s ml_class=%d model_ready=%s\n",
+                assessment.score, assessment.level, assessment.tinymlPrediction,
+                assessment.tinymlReady ? "yes" : "no");
+  Serial.printf("[GEOTECHNICAL FEATURES] rain=%.1fmm/h rain1h=%.1fmm rain24h=%.1fmm surface=%.1f%% subsurface=%.1f%% pore=%.1fkPa\n",
+                frame.rainfallIntensityMmH, frame.rainfall1hMm, frame.rainfall24hMm,
+                (float)frame.moisture, frame.subsurfaceMoisturePct, frame.porePressureKpa);
+  Serial.printf("[MOVEMENT FEATURES] tiltX=%.2f tiltY=%.2f tiltRate=%.2fdeg/h displacementProxy=%.2fmm displacementRate=%.2fmm/h\n",
+                frame.tiltXDeg, frame.tiltYDeg, frame.tiltRateDegPerHour,
+                frame.groundDisplacementMm, frame.groundDisplacementRateMmPerHour);
+  Serial.printf("[CONTEXT FEATURES] vibrationRMS=%.3fg peak=%.3fg freqProxy=%.1fHz soilTempProxy=%.1fC groundwaterProxy=%.2fm battery=%.0f%% health=%s\n",
+                frame.vibrationRmsG, frame.vibrationPeakG, frame.vibrationDominantHz,
+                frame.soilTemperatureC, frame.groundwaterDepthM, (float)frame.battery,
+                frame.healthy ? "OK" : "FAULT");
 }
 
 String buildPacket(unsigned long sequence,
@@ -298,18 +502,43 @@ String buildPacket(unsigned long sequence,
   packet += ",\"timestamp\":\"SIMULATED\",\"soil_moisture_pct\":";
   packet += frame.moisture;
   packet += ",\"tilt_deg\":";
-  packet += String(frame.tiltDeg, 1);
+  packet += String(fabs(frame.tiltXDeg), 2);
   packet += ",\"vibration_level\":";
   packet += frame.vibration;
   packet += ",\"battery_pct\":";
   packet += frame.battery;
+  packet += ",\"sensor_schema_version\":2";
+  packet += ",\"rainfall_intensity_mm_h\":" + String(frame.rainfallIntensityMmH, 2);
+  packet += ",\"rainfall_1h_mm\":" + String(frame.rainfall1hMm, 2);
+  packet += ",\"rainfall_24h_mm\":" + String(frame.rainfall24hMm, 2);
+  packet += ",\"soil_moisture_surface_pct\":" + String((float)frame.moisture, 2);
+  packet += ",\"soil_moisture_subsurface_pct\":" + String(frame.subsurfaceMoisturePct, 2);
+  packet += ",\"pore_water_pressure_kpa\":" + String(frame.porePressureKpa, 2);
+  packet += ",\"tilt_x_deg\":" + String(frame.tiltXDeg, 2);
+  packet += ",\"tilt_y_deg\":" + String(frame.tiltYDeg, 2);
+  packet += ",\"tilt_rate_deg_per_h\":" + String(frame.tiltRateDegPerHour, 3);
+  packet += ",\"ground_displacement_mm\":" + String(frame.groundDisplacementMm, 2);
+  packet += ",\"ground_displacement_rate_mm_per_h\":" + String(frame.groundDisplacementRateMmPerHour, 3);
+  packet += ",\"vibration_rms_g\":" + String(frame.vibrationRmsG, 3);
+  packet += ",\"vibration_peak_g\":" + String(frame.vibrationPeakG, 3);
+  packet += ",\"vibration_dominant_hz\":" + String(frame.vibrationDominantHz, 2);
+  packet += ",\"soil_temperature_c\":" + String(frame.soilTemperatureC, 2);
+  packet += ",\"groundwater_depth_m\":" + String(frame.groundwaterDepthM, 3);
+  packet += ",\"tinyml_prediction\":" + String(assessment.tinymlPrediction);
+  packet += ",\"model_ready\":" + String(assessment.tinymlReady ? "true" : "false");
+  packet += ",\"feature_inputs_valid\":" + String(frame.healthy ? "true" : "false");
+  packet += ",\"rainfall_history_valid\":" + String(frame.rainfallHistoryValid ? "true" : "false");
+  packet += ",\"groundwater_valid\":" + String(frame.groundwaterValid ? "true" : "false");
+  packet += ",\"model_id\":\"himrakshak-synthetic-demo-tree-v2\"";
+  packet += ",\"measurement_provenance\":\"WOKWI_VIRTUAL_WITH_DERIVED_PROXIES\"";
+  packet += ",\"rainfall_history_mode\":\"ACCELERATED_SYNTHETIC_SEEDED_1S_PER_MIN\"";
   packet += ",\"risk\":\"";
   packet += assessment.level;
   packet += "\",\"risk_score_demo\":";
   packet += assessment.score;
   packet += ",\"sensor_health\":\"";
   packet += frame.healthy ? "OK" : "FAULT";
-  packet += "\",\"transport\":\"WOKWI_SOFTWARE_SIMULATION\"}";
+  packet += "\",\"transport\":\"WOKWI_SOFTWARE_SIMULATION\",\"is_simulated\":true}";
   return packet;
 }
 
@@ -849,6 +1078,10 @@ void setup() {
   pinMode(RED_LED, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
   analogReadResolution(12);
+  pinMode(RAINFALL_PIN, INPUT);
+  pinMode(SUBSURFACE_MOISTURE_PIN, INPUT);
+  pinMode(PORE_PRESSURE_PIN, INPUT);
+  seedRainfallHistory();
 
   digitalWrite(GREEN_LED, LOW);
   digitalWrite(YELLOW_LED, LOW);
@@ -860,6 +1093,9 @@ void setup() {
                 TELEMETRY_INTERVAL_MS / 1000);
   Serial.printf("[COMMUNICATION STATUS] queue_capacity=%u tls=verified\n",
                 (unsigned)MAX_PENDING_PACKETS);
+  Serial.printf("[TINYML INITIALIZED] model=%s features=16 classes=NORMAL/WARNING/CRITICAL\n",
+                HimRakshakTinyML::MODEL_ID);
+  Serial.println("[PROVENANCE] virtual potentiometers + derived proxies; synthetic training labels");
 
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
@@ -868,11 +1104,12 @@ void setup() {
 }
 
 void loop() {
-  // Always perform local acquisition, decision-making and actuator control
-  // before attempting network operations.
   SensorFrame frame = acquireFilteredSensors();
-  Assessment assessment = assessRisk(frame.moisture, frame.tiltDeg,
-                                      frame.vibration);
+  float featureVector[16] = {};
+  makeTinyMlFeatures(frame, featureVector);
+  const bool modelReady = frame.healthy && frame.rainfallHistoryValid && frame.groundwaterValid;
+  const int tinymlPrediction = modelReady ? HimRakshakTinyML::predict(featureVector) : -1;
+  Assessment assessment = assessRisk(frame, tinymlPrediction);
   ControllerState nextState = evaluateState(frame, assessment);
   transitionState(nextState);
   updateIndicators();
@@ -880,23 +1117,22 @@ void loop() {
   unsigned long now = millis();
   if (now - lastDiagnosticLog >= DIAGNOSTIC_INTERVAL_MS) {
     lastDiagnosticLog = now;
-    Serial.printf("[SENSOR ACQUISITION] moisture=%d tilt=%.1f vibration=%d battery=%d health=%s\n",
-                  frame.moisture, frame.tiltDeg, frame.vibration,
-                  frame.battery, frame.healthy ? "OK" : "FAULT");
+    Serial.printf("[TINYML INFERENCE] ready=%s prediction=%d model=%s\n",
+                  modelReady ? "YES" : "NO", tinymlPrediction, HimRakshakTinyML::MODEL_ID);
     reportDecision(frame, assessment);
   }
 
   if (now - lastReport >= TELEMETRY_INTERVAL_MS) {
     lastReport = now;
     String packet = buildPacket(sequenceNumber, frame, assessment);
-    Serial.printf("[AUTONOMOUS RESPONSE] risk_state=%s local_leds_buzzer=active\n",
+    Serial.printf("[AUTONOMOUS RESPONSE] risk_state=%s local_leds_buzzer=updated\n",
                   stateName(controllerState));
-    Serial.printf("[TELEMETRY DELIVERY] sequence=%lu battery=%d%% risk=%s score=%d\n",
+    Serial.printf("[TELEMETRY DELIVERY] sequence=%lu battery=%d%% risk=%s score=%d tinyml=%d\n",
                   sequenceNumber, frame.battery, assessment.level,
-                  assessment.score);
+                  assessment.score, assessment.tinymlPrediction);
     if (enqueuePacket(packet, sequenceNumber)) {
       sequenceNumber++;
-      reportStatus("Packet queued for HTTPS delivery");
+      reportStatus("V2 packet queued for certificate-verified HTTPS delivery");
     }
   }
 

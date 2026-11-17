@@ -1,0 +1,117 @@
+{
+  "model_id": "himrakshak-synthetic-demo-tree-v2",
+  "model_version": "2.0.0-demo-synthetic",
+  "model_type": "DecisionTreeClassifier",
+  "training_source": "synthetic_demonstration_scenarios_only",
+  "field_validated": false,
+  "features": [
+    "rainfall_intensity_mm_h",
+    "rainfall_1h_mm",
+    "rainfall_24h_mm",
+    "soil_moisture_surface_pct",
+    "soil_moisture_subsurface_pct",
+    "pore_water_pressure_kpa",
+    "tilt_x_deg",
+    "tilt_y_deg",
+    "tilt_rate_deg_per_h",
+    "ground_displacement_mm",
+    "ground_displacement_rate_mm_per_h",
+    "vibration_rms_g",
+    "vibration_peak_g",
+    "vibration_dominant_hz",
+    "soil_temperature_c",
+    "groundwater_depth_m"
+  ],
+  "dataset_rows": 2400,
+  "class_counts": {
+    "0": 800,
+    "1": 800,
+    "2": 800
+  },
+  "train_rows": 1800,
+  "test_rows": 600,
+  "selected_metrics": {
+    "accuracy": 0.9883333333333333,
+    "critical_recall": 0.995,
+    "nodes": 19,
+    "depth": 4
+  },
+  "classification_report": {
+    "NORMAL": {
+      "precision": 0.995,
+      "recall": 0.995,
+      "f1-score": 0.995,
+      "support": 200.0
+    },
+    "WARNING": {
+      "precision": 0.9898477157360406,
+      "recall": 0.975,
+      "f1-score": 0.982367758186398,
+      "support": 200.0
+    },
+    "CRITICAL": {
+      "precision": 0.9802955665024631,
+      "recall": 0.995,
+      "f1-score": 0.9875930521091811,
+      "support": 200.0
+    },
+    "accuracy": 0.9883333333333333,
+    "macro avg": {
+      "precision": 0.9883810940795011,
+      "recall": 0.9883333333333333,
+      "f1-score": 0.9883202700985264,
+      "support": 600.0
+    },
+    "weighted avg": {
+      "precision": 0.9883810940795013,
+      "recall": 0.9883333333333333,
+      "f1-score": 0.9883202700985263,
+      "support": 600.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      199,
+      1,
+      0
+    ],
+    [
+      1,
+      195,
+      4
+    ],
+    [
+      0,
+      1,
+      199
+    ]
+  ],
+  "candidate_models": [
+    {
+      "accuracy": 0.9883333333333333,
+      "critical_recall": 0.995,
+      "nodes": 19,
+      "depth": 4
+    },
+    {
+      "accuracy": 0.9883333333333333,
+      "critical_recall": 0.995,
+      "nodes": 19,
+      "depth": 4
+    },
+    {
+      "accuracy": 0.9883333333333333,
+      "critical_recall": 0.995,
+      "nodes": 19,
+      "depth": 4
+    }
+  ],
+  "sklearn_version": "1.9.1",
+  "trained_at": "2026-11-17T11:40:30.685440Z",
+  "limitations": [
+    "Synthetic scenario labels are generated from illustrative prototype rules.",
+    "Metrics measure agreement with synthetic labels, not real landslide prediction accuracy.",
+    "Soil temperature, groundwater and some motion/vibration fields are virtual or derived demonstration proxies in Wokwi."
+  ],
+  "model_sha256": "8a367c119bd164990705ff384d0e679ef30bf23ab472cbbf8db1fceedf6654db"
+}

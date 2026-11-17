@@ -22,9 +22,27 @@ class RasterGrid:
     crs: str
 
 
+def _validate_projected_metre_crs(crs: str) -> None:
+    if not crs:
+        raise ValueError("a projected CRS with metre units is required")
+    try:
+        from pyproj import CRS  # type: ignore
+    except ImportError:
+        # Without pyproj, accept only common metre-based projected CRS IDs.
+        upper = crs.upper().replace(" ", "")
+        if upper not in {"EPSG:32643", "EPSG:32644", "EPSG:3857"}:
+            raise ValueError("install pyproj to validate projected CRS units, or use EPSG:32643/EPSG:32644")
+        return
+    parsed = CRS.from_user_input(crs)
+    if not parsed.is_projected:
+        raise ValueError("terrain derivatives require a projected CRS")
+    axes = parsed.axis_info[:2]
+    if len(axes) < 2 or any(axis.unit_conversion_factor is None or abs(axis.unit_conversion_factor - 1.0) > 1e-9 for axis in axes):
+        raise ValueError("terrain derivatives require projected CRS axes measured in metres")
+
+
 def read_ascii_grid(path: str | Path, *, crs: str) -> RasterGrid:
-    if not crs or crs.upper() in {"EPSG:4326", "WGS84", "WGS 84"}:
-        raise ValueError("terrain derivatives require a projected CRS with metre units")
+    _validate_projected_metre_crs(crs)
     lines = Path(path).read_text(encoding="utf-8").splitlines()
     header: dict[str, str] = {}
     index = 0
@@ -43,14 +61,15 @@ def read_ascii_grid(path: str | Path, *, crs: str) -> RasterGrid:
             rows.append(values)
     if len(rows) != int(header["nrows"]) or any(len(row) != int(header["ncols"]) for row in rows):
         raise ValueError("ASCII Grid row dimensions do not match header")
-    return RasterGrid(
-        tuple(rows),
-        float(header.get("xllcorner", header.get("xllcenter", 0))),
-        float(header.get("yllcorner", header.get("yllcenter", 0))),
-        float(header["cellsize"]),
-        nodata,
-        crs,
-    )
+    cellsize = float(header["cellsize"])
+    x_origin = float(header.get("xllcorner", header.get("xllcenter", 0)))
+    y_origin = float(header.get("yllcorner", header.get("yllcenter", 0)))
+    # Convert centre coordinates to lower-left corner coordinates once.
+    if "xllcorner" not in header and "xllcenter" in header:
+        x_origin -= cellsize / 2.0
+    if "yllcorner" not in header and "yllcenter" in header:
+        y_origin -= cellsize / 2.0
+    return RasterGrid(tuple(rows), x_origin, y_origin, cellsize, nodata, crs)
 
 
 def terrain_features(grid: RasterGrid) -> list[dict[str, Any]]:
@@ -113,8 +132,9 @@ def terrain_features(grid: RasterGrid) -> list[dict[str, Any]]:
             output.append({
                 "row": row,
                 "column": column,
-                "longitude": grid.xllcorner + (column + 0.5) * grid.cellsize,
-                "latitude": grid.yllcorner + (height - row - 0.5) * grid.cellsize,
+                # These are projected coordinates, not geographic longitude/latitude.
+                "x": grid.xllcorner + (column + 0.5) * grid.cellsize,
+                "y": grid.yllcorner + (height - row - 0.5) * grid.cellsize,
                 "elevation": elevation,
                 "slope_angle": slope,
                 "slope_aspect": aspect,
@@ -122,6 +142,7 @@ def terrain_features(grid: RasterGrid) -> list[dict[str, Any]]:
                 "flow_accumulation": flow_accumulation[(row, column)],
                 "drainage_density": flow_accumulation[(row, column)] / (grid.cellsize ** 2),
                 "crs": grid.crs,
+                "coordinate_units": "metres",
                 "source": "DEM",
                 "source_product": "ESRI_ASCII_GRID",
                 "spatial_resolution": f"{grid.cellsize} map units",
@@ -129,7 +150,7 @@ def terrain_features(grid: RasterGrid) -> list[dict[str, Any]]:
     return output
 
 
-def process_dem(path: str | Path, *, crs: str, **kwargs: Any) -> list[dict[str, Any]]:
+def process_dem(path: str | Path, *, crs: str, **kwargs: Any) -> list[dict[str, Any]] | dict[str, Any]:
     suffix = Path(path).suffix.lower()
     if suffix in {".asc", ".ascii"}:
         return terrain_features(read_ascii_grid(path, crs=crs))

@@ -23,6 +23,9 @@ def assess_risk(reading: Mapping[str, Any]) -> dict[str, Any]:
     """
 
     normalized = validate_reading(reading)
+    if normalized.get("sensor_schema_version") == 2:
+        from .risk_v2 import assess_risk_v2
+        return assess_risk_v2(normalized)
     moisture = float(normalized["soil_moisture_pct"])
     tilt = float(normalized["tilt_deg"])
     vibration = float(normalized["vibration_level"])

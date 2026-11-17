@@ -86,6 +86,18 @@ class IntelligenceStore:
         if connection is not self._memory_connection:
             connection.close()
 
+    def close(self) -> None:
+        """Close the retained in-memory connection, if one was opened.
+
+        File-backed operations close each short-lived connection themselves.
+        The in-memory connection is intentionally retained across operations
+        so that separate calls share the same SQLite database, and callers
+        should close the store when its lifetime ends.
+        """
+        if self._memory_connection is not None:
+            self._memory_connection.close()
+            self._memory_connection = None
+
     def insert_observations(self, observations: Iterable[Mapping[str, Any]]) -> int:
         rows = list(observations)
         connection = self.connect()

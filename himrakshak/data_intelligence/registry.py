@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
-REGISTRY_VERSION = "18.1"
+REGISTRY_VERSION = "18.4"
 
 
 @dataclass(frozen=True)
@@ -58,17 +58,21 @@ def _p(
 
 
 _definitions = [
-    _p("rainfall_intensity_1h", "Rainfall intensity (1 hour)", "mm/hour", "GPM_IMERG/Open-Meteo", frequency="hourly", derived=True),
+    _p("rainfall_intensity_1h", "Rainfall intensity (1 hour)", "mm/hour", "derived from hourly precipitation depth", frequency="hourly", derived=True),
+    _p("rainfall_observation", "Rainfall accumulation (source interval)", "mm per source interval", "IMD/manual gridded observation", frequency="source interval"),
+    _p("rainfall_accumulation_1h", "Hourly rainfall accumulation", "mm", "Open-Meteo rain/IMD", frequency="hourly"),
+    _p("precipitation_accumulation_1h", "Hourly total precipitation accumulation", "mm", "Open-Meteo precipitation", frequency="hourly"),
     _p("rainfall_accumulation_24h", "Cumulative rainfall (24 hours)", "mm", "GPM_IMERG/Open-Meteo", frequency="hourly", derived=True),
     _p("rainfall_accumulation_72h", "Cumulative rainfall (72 hours)", "mm", "GPM_IMERG/Open-Meteo", frequency="hourly", derived=True),
     _p("rainfall_antecedent_7d", "Antecedent rainfall (7 days)", "mm", "GPM_IMERG/Open-Meteo", frequency="daily", derived=True),
     _p("air_temperature", "Air temperature", "deg C", "Open-Meteo/IMD", frequency="hourly"),
     _p("snowfall", "Snowfall", "cm", "Open-Meteo", frequency="hourly"),
+    _p("snow_depth", "Snow depth", "cm", "Open-Meteo/field observation", frequency="hourly"),
     _p("snow_cover_percentage", "Snow cover percentage", "%", "Sentinel-2", frequency="acquisition", derived=True),
     _p("snowmelt_estimate", "Snowmelt estimate", "mm water equivalent", "Open-Meteo", frequency="daily", derived=True),
     _p("pore_water_pressure", "Pore-water pressure", "kPa", "physical sensor", frequency="sensor interval"),
     _p("groundwater_depth", "Groundwater depth", "m", "CGWB", frequency="quarterly"),
-    _p("shallow_soil_moisture", "Shallow soil moisture", "% VWC", "physical sensor/Open-Meteo", frequency="hourly"),
+    _p("shallow_soil_moisture", "Shallow soil moisture", "m3/m3", "physical sensor/Open-Meteo", frequency="hourly"),
     _p("deep_soil_moisture", "Deep soil moisture", "% VWC", "physical sensor", frequency="sensor interval"),
     _p("stream_water_level", "Stream water level", "cm", "physical sensor", frequency="sensor interval"),
     _p("stream_level_rise_rate", "Stream-level rise rate", "cm/hour", "derived from sensor", frequency="hourly", derived=True),
