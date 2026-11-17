@@ -41,6 +41,39 @@ struct Assessment {
   const char *level;
 };
 
+enum ControllerState {
+  BOOT,
+  INITIALIZING,
+  NORMAL,
+  WARNING,
+  CRITICAL,
+  SENSOR_FAULT,
+  COMMUNICATION_DEGRADED,
+  RECOVERY
+};
+
+struct SensorFrame {
+  int moisture;
+  float tiltDeg;
+  int vibration;
+  int battery;
+  bool healthy;
+};
+
+ControllerState controllerState = BOOT;
+ControllerState previousState = BOOT;
+SensorFrame filteredFrame = {0, 0.0f, 0, 0, false};
+unsigned long lastSensorSample = 0;
+const float FILTER_ALPHA = 0.25f;
+const int ADC_MIN_VALID = 5;
+const int ADC_MAX_VALID = 4090;
+const unsigned long SENSOR_STUCK_TIMEOUT_MS = 30000;
+int lastMoistureRaw = -1;
+int lastTiltRaw = -1;
+int lastBatteryRaw = -1;
+unsigned long sensorStuckSince = 0;
+bool sensorReadHealthy = true;
+
 struct PendingPacket {
   String json;
   unsigned long sequence;
@@ -89,11 +122,32 @@ Assessment assessRisk(int moisture, float tiltDeg, int vibration) {
   return {score, level};
 }
 
+bool validAdc(int value) {
+  return value >= ADC_MIN_VALID && value <= ADC_MAX_VALID;
+}
+
 void readSensors(int &moisture, float &tiltDeg, int &vibration, int &battery) {
-  moisture = map(analogRead(MOISTURE_PIN), 0, 4095, 0, 100);
-  tiltDeg = map(analogRead(TILT_PIN), 0, 4095, 0, 150) / 10.0f;
-  battery = map(analogRead(BATTERY_PIN), 0, 4095, 0, 100);
+  int moistureRaw = analogRead(MOISTURE_PIN);
+  int tiltRaw = analogRead(TILT_PIN);
+  int batteryRaw = analogRead(BATTERY_PIN);
+  bool healthy = validAdc(moistureRaw) && validAdc(tiltRaw) && validAdc(batteryRaw);
+  sensorReadHealthy = healthy;
+  moisture = map(constrain(moistureRaw, 0, 4095), 0, 4095, 0, 100);
+  tiltDeg = map(constrain(tiltRaw, 0, 4095), 0, 4095, 0, 150) / 10.0f;
+  battery = map(constrain(batteryRaw, 0, 4095), 0, 4095, 0, 100);
   vibration = (digitalRead(VIBRATION_PIN) == LOW) ? 85 : 12;
+
+  if (moistureRaw == lastMoistureRaw && tiltRaw == lastTiltRaw &&
+      batteryRaw == lastBatteryRaw) {
+    if (sensorStuckSince == 0) sensorStuckSince = millis();
+    if (millis() - sensorStuckSince >= SENSOR_STUCK_TIMEOUT_MS) healthy = false;
+  } else {
+    sensorStuckSince = 0;
+  }
+  lastMoistureRaw = moistureRaw;
+  lastTiltRaw = tiltRaw;
+  lastBatteryRaw = batteryRaw;
+  sensorReadHealthy = healthy;
 
 #if HIMRAKSHAK_USE_SCENARIO_PRESET
   if (strcmp(HIMRAKSHAK_SCENARIO, "heavy_rain") == 0) {
@@ -108,6 +162,82 @@ void readSensors(int &moisture, float &tiltDeg, int &vibration, int &battery) {
     vibration = max(vibration, 88);
   }
 #endif
+
+  if (!healthy) {
+    Serial.printf("[SENSOR HEALTH] invalid_or_stuck moisture_raw=%d tilt_raw=%d battery_raw=%d\n",
+                  moistureRaw, tiltRaw, batteryRaw);
+  }
+}
+
+SensorFrame acquireFilteredSensors() {
+  int moisture;
+  float tiltDeg;
+  int vibration;
+  int battery;
+  readSensors(moisture, tiltDeg, vibration, battery);
+  if (lastSensorSample == 0) {
+    filteredFrame = {moisture, tiltDeg, vibration, battery, sensorReadHealthy};
+  } else {
+    filteredFrame.moisture = (int)round(FILTER_ALPHA * moisture +
+                                        (1.0f - FILTER_ALPHA) * filteredFrame.moisture);
+    filteredFrame.tiltDeg = FILTER_ALPHA * tiltDeg +
+                            (1.0f - FILTER_ALPHA) * filteredFrame.tiltDeg;
+    filteredFrame.vibration = (int)round(FILTER_ALPHA * vibration +
+                                          (1.0f - FILTER_ALPHA) * filteredFrame.vibration);
+    filteredFrame.battery = (int)round(FILTER_ALPHA * battery +
+                                       (1.0f - FILTER_ALPHA) * filteredFrame.battery);
+  }
+  filteredFrame.healthy = sensorReadHealthy;
+  lastSensorSample = millis();
+  Serial.printf("[SENSOR ACQUISITION] moisture=%d tilt=%.1f vibration=%d battery=%d filtered_alpha=%.2f\n",
+                filteredFrame.moisture, filteredFrame.tiltDeg,
+                filteredFrame.vibration, filteredFrame.battery, FILTER_ALPHA);
+  return filteredFrame;
+}
+
+const char *stateName(ControllerState state) {
+  switch (state) {
+    case BOOT: return "BOOT";
+    case INITIALIZING: return "INITIALIZING";
+    case NORMAL: return "NORMAL";
+    case WARNING: return "WARNING";
+    case CRITICAL: return "CRITICAL";
+    case SENSOR_FAULT: return "SENSOR_FAULT";
+    case COMMUNICATION_DEGRADED: return "COMMUNICATION_DEGRADED";
+    case RECOVERY: return "RECOVERY";
+  }
+  return "UNKNOWN";
+}
+
+ControllerState evaluateState(const SensorFrame &frame, const Assessment &assessment) {
+  if (!frame.healthy) return SENSOR_FAULT;
+  if (strcmp(assessment.level, "CRITICAL") == 0) return CRITICAL;
+  if (strcmp(assessment.level, "WARNING") == 0) return WARNING;
+  if (controllerState == WARNING &&
+      (frame.moisture >= 55 || frame.tiltDeg >= 3.5f || frame.vibration >= 55)) {
+    return WARNING;
+  }
+  if (controllerState == CRITICAL &&
+      (frame.moisture >= 70 || frame.tiltDeg >= 7.0f || frame.vibration >= 75)) {
+    return CRITICAL;
+  }
+  if (controllerState == COMMUNICATION_DEGRADED) return RECOVERY;
+  return NORMAL;
+}
+
+void transitionState(ControllerState next) {
+  if (next == controllerState) return;
+  previousState = controllerState;
+  controllerState = next;
+  Serial.printf("[STATE TRANSITION] %s -> %s\n", stateName(previousState), stateName(controllerState));
+}
+
+void reportDecision(const SensorFrame &frame, const Assessment &assessment) {
+  Serial.printf("[EDGE PROCESSING] rule_based_score=%d level=%s\n",
+                assessment.score, assessment.level);
+  Serial.printf("[DECISION ENGINE] reasons=moisture:%d tilt:%.1f vibration:%d battery:%d health:%s\n",
+                frame.moisture, frame.tiltDeg, frame.vibration, frame.battery,
+                frame.healthy ? "ok" : "fault");
 }
 
 String buildPacket(unsigned long sequence) {
@@ -496,14 +626,17 @@ void flushQueue() {
 }
 
 void updateIndicators(const Assessment &assessment) {
-  bool critical = strcmp(assessment.level, "CRITICAL") == 0;
-  bool warning = strcmp(assessment.level, "WARNING") == 0;
+  bool critical = controllerState == CRITICAL;
+  bool warning = controllerState == WARNING || controllerState == COMMUNICATION_DEGRADED;
   digitalWrite(GREEN_LED, (!critical && !warning) ? HIGH : LOW);
   digitalWrite(YELLOW_LED, warning ? HIGH : LOW);
   digitalWrite(RED_LED, critical ? HIGH : LOW);
   unsigned long now = millis();
   if (critical && now - lastBeep >= 900) {
     tone(BUZZER_PIN, 1800, 180);
+    lastBeep = now;
+  } else if (warning && now - lastBeep >= 1800) {
+    tone(BUZZER_PIN, 900, 80);
     lastBeep = now;
   } else if (!critical) {
     noTone(BUZZER_PIN);
@@ -512,6 +645,9 @@ void updateIndicators(const Assessment &assessment) {
 
 void setup() {
   Serial.begin(115200);
+  Serial.println("[HIMRAKSHAK BOOT]");
+  controllerState = INITIALIZING;
+  Serial.println("[ESP32 INITIALIZED]");
   pinMode(VIBRATION_PIN, INPUT_PULLUP);
   pinMode(GREEN_LED, OUTPUT);
   pinMode(YELLOW_LED, OUTPUT);
@@ -524,23 +660,29 @@ void setup() {
   connectWiFi();
   synchronizeClock();
   synchronizeStartupSequence();
+  Serial.printf("[COMMUNICATION STATUS] queue_capacity=%u tls=verified\n",
+                (unsigned)MAX_PENDING_PACKETS);
 }
 
 void loop() {
-  int moisture;
-  float tiltDeg;
-  int vibration;
-  int battery;
-  readSensors(moisture, tiltDeg, vibration, battery);
-  Assessment assessment = assessRisk(moisture, tiltDeg, vibration);
+  SensorFrame frame = acquireFilteredSensors();
+  Assessment assessment = assessRisk(frame.moisture, frame.tiltDeg, frame.vibration);
+  ControllerState nextState = evaluateState(frame, assessment);
+  if (WiFi.status() != WL_CONNECTED && pendingCount > 0) {
+    nextState = COMMUNICATION_DEGRADED;
+  }
+  transitionState(nextState);
+  reportDecision(frame, assessment);
   updateIndicators(assessment);
 
   unsigned long now = millis();
   if (now - lastReport >= TELEMETRY_INTERVAL_MS) {
     lastReport = now;
     String packet = buildPacket(sequenceNumber);
-    Serial.printf("Generated sequence=%lu battery=%d%% risk=%s score=%d\n",
-                  sequenceNumber, battery, assessment.level, assessment.score);
+    Serial.printf("[AUTONOMOUS RESPONSE] state=%s local_leds_buzzer=active\n",
+                  stateName(controllerState));
+    Serial.printf("[TELEMETRY DELIVERY] sequence=%lu battery=%d%% risk=%s score=%d\n",
+                  sequenceNumber, frame.battery, assessment.level, assessment.score);
     if (enqueuePacket(packet, sequenceNumber)) {
       sequenceNumber++;
       reportStatus("Packet queued for HTTPS delivery");

@@ -1,4 +1,4 @@
-# HIMRAKSHAK — FINAL PROJECT HANDOVER (PHASE 17)
+# HIMRAKSHAK — FINAL PROJECT HANDOVER (AUTONOMOUS EDGE TRANSFORMATION)
 
 > Phase 12-17 additions are summarized in
 > [`HIMRAKSHAK_FINAL_RELEASE_REPORT.md`](HIMRAKSHAK_FINAL_RELEASE_REPORT.md).
@@ -6,6 +6,12 @@
 > does not claim physical hardware or LoRa validation.
 
 ## 1. Project Overview
+
+HimRakshak is positioned honestly as **Autonomous Edge Intelligence for
+Next-Generation Embedded Monitoring Systems**. Theme 3 alignment is based on
+ESP32 embedded engineering, virtual hardware, local decision/control, and
+fault-tolerant distributed telemetry—not quantum computing or semiconductor
+fabrication.
 
 **HimRakshak** is an offline-first landslide early-warning demonstration system engineered for remote mountainous regions. It combines:
 - A responsive, single-page web dashboard (`index.html`) featuring real-time risk visualization, slope illustration, sensor gauges, multi-station switching, scenario injection, and CSV session export.

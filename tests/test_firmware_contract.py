@@ -64,6 +64,24 @@ class FirmwareContractTests(unittest.TestCase):
         self.assertRegex(source, r'if \(packet\.sequence == state\.latestSequence')
         self.assertRegex(source, r'if \(packet\.sequence < state\.latestSequence')
 
+    def test_firmware_exposes_autonomous_edge_state_machine_and_diagnostics(self):
+        source = FIRMWARE.read_text(encoding="utf-8")
+        for marker in (
+            "enum ControllerState",
+            "SENSOR_FAULT",
+            "COMMUNICATION_DEGRADED",
+            "RECOVERY",
+            "FILTER_ALPHA",
+            "SENSOR_STUCK_TIMEOUT_MS",
+            "[HIMRAKSHAK BOOT]",
+            "[SENSOR ACQUISITION]",
+            "[DECISION ENGINE]",
+            "[STATE TRANSITION]",
+            "[AUTONOMOUS RESPONSE]",
+            "local_leds_buzzer=active",
+        ):
+            self.assertIn(marker, source)
+
     def test_backend_sequence_protection_contract_remains_documented(self):
         api_contract = (ROOT / "docs" / "api-contract.md").read_text(encoding="utf-8")
         self.assertIn("preserves the incoming device-assigned `sequence`", api_contract)
