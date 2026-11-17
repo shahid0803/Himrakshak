@@ -32,6 +32,15 @@ def ingest_landslide_file(path: str | Path, *, store: IntelligenceStore, **kwarg
 
 def ingest_rainfall_csv(path: str | Path, *, store: IntelligenceStore, longitude: float, latitude: float) -> int:
     records = import_imd_archive(path, longitude=longitude, latitude=latitude)
+    if not isinstance(records, list):
+        dataset = records.get("dataset") if isinstance(records, dict) else None
+        close = getattr(dataset, "close", None)
+        if callable(close):
+            close()
+        raise ValueError(
+            "NetCDF was opened but not converted into observations; export the selected "
+            "rainfall time series to CSV with observed_at and rainfall_mm columns first"
+        )
     retrieved = _retrieved_at()
     observations = []
     for record in records:
@@ -41,7 +50,7 @@ def ingest_rainfall_csv(path: str | Path, *, store: IntelligenceStore, longitude
             "station_id": None,
             "longitude": longitude,
             "latitude": latitude,
-            "parameter_id": "rainfall_intensity_1h" if record["source"] == "IMD" else "rainfall_intensity_1h",
+            "parameter_id": "rainfall_observation",
             "value": record["value"],
             "unit": record["unit"],
             "source": record["source"],
@@ -51,15 +60,17 @@ def ingest_rainfall_csv(path: str | Path, *, store: IntelligenceStore, longitude
             "quality_status": "missing" if record["value"] is None else "valid",
             "spatial_resolution": record.get("spatial_resolution"),
             "uncertainty": None,
-            "processing_version": "18.2",
+            "processing_version": "18.3",
             "is_simulated": 0,
         })
     return store.insert_observations(observations)
 
 
-def ingest_dem_file(path: str | Path, *, crs: str, store: IntelligenceStore | None = None) -> list[dict[str, Any]]:
+def ingest_dem_file(path: str | Path, *, crs: str, store: IntelligenceStore | None = None) -> Any:
     features = process_dem(path, crs=crs)
-    if store is not None and features and isinstance(features[0], dict) and "row" in features[0]:
+    # GeoTIFF currently returns source metadata only; only ASCII-grid output
+    # contains derived per-cell features suitable for terrain_features storage.
+    if isinstance(features, list) and store is not None and features and "row" in features[0]:
         store.insert_terrain_features(features)
     return features
 
@@ -67,11 +78,24 @@ def ingest_dem_file(path: str | Path, *, crs: str, store: IntelligenceStore | No
 def run(task: str) -> dict[str, object]:
     if task not in {"rainfall", "terrain", "landslides", "all", "registry"}:
         raise ValueError(f"unsupported task: {task}")
+    if task == "registry":
+        status = "READY"
+        message = "Parameter registry is available. No observations are implied by this status."
+    else:
+        status = "NO_SOURCE_DATA_IMPORTED"
+        message = (
+            "No external source data was imported by this command. Use a source-specific "
+            "adapter with a real downloaded archive or configured source credentials. "
+            "The research ML pipelines remain ineligible until genuine, time-aligned "
+            "observations and event labels have been ingested."
+        )
     return {
         "task": task,
-        "status": "READY",
+        "status": status,
+        "source_data_available": False,
+        "model_training_enabled": False,
         "registry_version": registry_as_dict()["version"],
-        "message": "No external data was downloaded. Run the source-specific adapter with its documented credentials or manual archive.",
+        "message": message,
     }
 
 
@@ -95,7 +119,11 @@ def main() -> None:
         elif args.task == "terrain":
             if not args.crs:
                 parser.error("--crs is required for terrain input")
-            result = {"features": len(ingest_dem_file(args.input, crs=args.crs, store=store))}
+            imported = ingest_dem_file(args.input, crs=args.crs, store=store)
+            if isinstance(imported, list):
+                result = {"features": len(imported), "status": "DERIVATIVES_PROCESSED"}
+            else:
+                result = {"features": 0, "status": imported.get("status", "METADATA_ONLY"), "metadata": imported}
         else:
             parser.error("--input must be used with rainfall, terrain, or landslides")
         print(json.dumps(result, indent=2))

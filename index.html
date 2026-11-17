@@ -29,12 +29,14 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 
 @media(max-width:980px){.layout{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.kpis{gap:8px}.kpi{padding:12px;min-height:100px}.kpi-number{font-size:22px}.meters{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.meter{padding:8px}.meter-value{font-size:16px}.risk-overview{gap:12px}.score-ring{width:76px;height:76px}.risk-title{font-size:18px}.card-head{padding:14px 14px 0}.body{padding:14px}.topbar{align-items:flex-start}.brand h1{font-size:18px}}
 .deeptech-hero{background:linear-gradient(135deg,#0b1728,#102b4b 55%,#0a1a2e);color:#eaf5ff;border:1px solid #21486d;border-radius:18px;padding:clamp(24px,5vw,54px);margin-bottom:18px;position:relative;overflow:hidden}.deeptech-hero:after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(107,195,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(107,195,255,.08) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}.hero-content{position:relative;z-index:1;max-width:780px}.hero-content h2{font-size:clamp(31px,6vw,68px);line-height:.98;letter-spacing:-2px;margin:10px 0 15px}.hero-content p{color:#b9d1e8;max-width:700px;font-size:15px}.hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}.hero-actions a{display:inline-flex;text-decoration:none}.hero-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:28px}.hero-stat{border:1px solid #315777;background:#102640cc;border-radius:10px;padding:11px;font-size:10px;color:#b9d1e8;font-weight:800}.hero-stat strong{display:block;color:#62d5ff;font-size:12px;margin-bottom:3px}.section-title{margin:28px 0 10px}.section-title h2{font-size:24px;color:var(--navy);margin:0}.section-title p{color:var(--muted);margin:5px 0}.lab-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(260px,.7fr);gap:14px}.lab-frame{min-height:440px;background:#0b1728;border-radius:12px;overflow:hidden;position:relative}.lab-frame iframe{width:100%;height:440px;border:0;background:#0b1728}.lab-empty{display:grid;place-items:center;min-height:440px;padding:30px;text-align:center;color:#c7d9ec}.lab-empty strong{display:block;color:#64d8ff;font-size:18px;margin-bottom:8px}.lab-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}.lab-tab{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 13px;font-weight:850;font-size:11px}.lab-tab.active{background:var(--blue);border-color:var(--blue);color:#fff}.lab-side{display:grid;gap:10px}.lab-side .card{box-shadow:none}.pin-table{width:100%;border-collapse:collapse;font-size:11px}.pin-table td{padding:6px;border-bottom:1px solid var(--line)}.pin-table td:last-child{font-family:ui-monospace,monospace;color:#1f5a8b}.architecture{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.arch-node{border:1px solid #b9d9ee;background:#f4fbff;border-radius:11px;padding:13px;position:relative}.arch-node:not(:last-child):after{content:"→";position:absolute;right:-13px;top:31%;color:#2c9bd0;font-size:20px;font-weight:900}.arch-node strong{display:block;color:#15577f;font-size:12px}.arch-node span{display:block;color:#60758a;font-size:10px;margin-top:5px}.lab-note{font-size:11px;color:#64758b;line-height:1.55}.limitations{background:#fff9e9;border-color:#f0d293}.limitations .body{color:#684d17;font-size:12px}.state-strip{display:flex;gap:8px;flex-wrap:wrap}.state-strip span{border-radius:7px;padding:6px 8px;background:#edf3fa;color:#31506d;font-size:10px;font-weight:850}.state-strip span.active{background:#dff7ff;color:#126582}@media(max-width:980px){.hero-stat-grid,.architecture{grid-template-columns:repeat(2,minmax(0,1fr))}.lab-grid{grid-template-columns:1fr}.arch-node:not(:last-child):after{display:none}}@media(max-width:550px){.hero-stat-grid,.architecture{grid-template-columns:1fr}.hero-content h2{letter-spacing:-1px}}
+
+.v2-panel{margin:22px 0}.v2-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.v2-item{border:1px solid var(--line);border-radius:11px;padding:11px;background:#fff;min-width:0}.v2-item strong{display:block;font-size:11px;color:#53647a}.v2-item span{display:block;font-size:20px;font-weight:850;letter-spacing:-.4px;margin-top:6px;overflow-wrap:anywhere}.v2-item small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.v2-actions{display:flex;flex-wrap:wrap;gap:8px}.v2-status{display:inline-flex;padding:5px 8px;border-radius:7px;background:#eef2f7;color:#52647a;font-size:10px;font-weight:850}.v2-status.ok{background:#e7f7ee;color:#147a46}.v2-status.warn{background:#fff5dd;color:#8b6500}.v2-status.bad{background:#ffeded;color:#a62e34}.v2-meta{font-size:11px;color:var(--muted);line-height:1.55}.v2-meta strong{color:var(--ink)}.v2-controls{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.v2-controls select{padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}.v2-card-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:14px}.v2-subtitle{font-size:12px;font-weight:850;color:var(--navy);margin:16px 0 9px}.v2-warning{background:#fff9e9;border:1px solid #f0d293;color:#684d17;border-radius:10px;padding:11px 12px;font-size:11px;line-height:1.55;margin-top:12px}@media(max-width:980px){.v2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v2-card-grid{grid-template-columns:1fr}}@media(max-width:550px){.v2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
 <div class="app">
 <header class="topbar">
-  <div class="brand"><div class="logo">⛰</div><div><h1>HimRakshak</h1><p>Offline landslide early-warning · prototype console</p></div></div>
+  <div class="brand"><div class="logo">⛰</div><div><h1>HimRakshak</h1><p>Multi-parameter geotechnical monitoring · TinyML demo</p></div></div>
   <div class="top-actions"><span class="pill"><span class="dot"></span> VIRTUAL ESP32</span><span class="pill" id="modePill">EDGE INTELLIGENCE</span></div>
 </header>
 <main class="main">
@@ -42,17 +44,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     <div class="hero-content">
       <div class="eyebrow" style="color:#62d5ff">HIMRAKSHAK / THEME 3 ENGINEERING DEMO</div>
       <h2>Autonomous Edge Intelligence</h2>
-      <p>A virtual ESP32-powered autonomous embedded platform demonstrating sensor acquisition, local rule-based processing, autonomous control and fault-tolerant distributed monitoring.</p>
+      <p>A virtual ESP32-powered geotechnical monitoring prototype combining eight environmental parameter groups, local signal processing, TinyML demonstration inference and safety-aware autonomous response.</p>
       <div class="hero-actions"><a class="btn primary" href="#system-overview">Explore System</a><a class="btn" href="#hardware-lab">Open Virtual Hardware Lab</a><a class="btn" href="#architecture">View Architecture</a></div>
-      <div class="hero-stat-grid"><div class="hero-stat"><strong>ESP32</strong>Embedded platform</div><div class="hero-stat"><strong>WOKWI</strong>Virtual hardware prototype</div><div class="hero-stat"><strong>LOCAL RULES</strong>Edge processing</div><div class="hero-stat"><strong>3 NODES</strong>Distributed architecture</div></div>
+      <div class="hero-stat-grid"><div class="hero-stat"><strong>ESP32</strong>Embedded platform</div><div class="hero-stat"><strong>WOKWI</strong>Virtual hardware prototype</div><div class="hero-stat"><strong>TINYML + RULES</strong>Edge inference</div><div class="hero-stat"><strong>3 NODES</strong>Distributed architecture</div></div>
     </div>
   </section>
-  <section class="intro"><div><div class="eyebrow">Field intelligence console / demo 01</div><h2>Monitor the slope. Warn before the road is at risk.</h2><p>Explore simulated soil moisture, tilt and vibration signals. Trigger test scenarios and observe how a local risk engine and a simulated radio receiver respond.</p></div><div class="demo-label">◉ <span id="modeIndicator">Standalone browser mode · no API server</span></div></section>
-  <div class="notice"><div class="notice-icon">ⓘ</div><div><b>Prototype disclosure — not a real landslide detector</b>All values, radio packets, map zones and response times on this page are simulated. This file can run without internet, but it does not connect to physical sensors or transmit real LoRa signals.</div></div>
+  <section class="intro"><div><div class="eyebrow">Field intelligence console / demo 01</div><h2>Monitor the slope. Warn before the road is at risk.</h2><p>Explore eight environmental parameter groups through virtual sensor inputs and derived proxies. Run backend scenarios to compare TinyML inference with rule-based safety assessment.</p></div><div class="demo-label">◉ <span id="modeIndicator">Standalone browser mode · no API server</span></div></section>
+  <div class="notice"><div class="notice-icon">ⓘ</div><div><b>Prototype disclosure — not a real landslide detector</b>All values, packet flows, derived measurements and response times are simulated. This prototype has no physical sensors or radio link. TinyML metrics describe agreement with synthetic scenario labels, not validated landslide prediction performance.</div></div>
   <section class="card station-bar"><div class="card-head"><div><h3>Virtual station roster</h3><p>Exactly three independent stations; select one to inspect its local state.</p></div><span class="tag">3 STATIONS</span></div><div class="body" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><label for="stationSelect" style="font-size:12px;font-weight:800">Active station</label><select id="stationSelect" class="small-btn"><option value="HR-01">HR-01 · Virtual Station 1</option><option value="HR-02">HR-02 · Virtual Station 2</option><option value="HR-03">HR-03 · Virtual Station 3</option></select><span class="micro" id="stationSummary">No events recorded for this station.</span></div></section>
   <section class="kpis">
     <article class="card kpi"><div class="kpi-top"><span id="nodeLabel">Sensor node · HR-01</span><span class="kpi-icon">⌁</span></div><div class="kpi-number" id="kpiRisk">NORMAL</div><div class="kpi-foot" id="kpiRiskFoot">Local simulated risk state</div></article>
-    <article class="card kpi"><div class="kpi-top"><span>Radio link</span><span class="kpi-icon">⌁</span></div><div class="kpi-number" id="kpiLink">CONNECTED</div><div class="kpi-foot" id="kpiLinkFoot">Simulated link · no actual RF</div></article>
+    <article class="card kpi"><div class="kpi-top"><span>Software telemetry link</span><span class="kpi-icon">⌁</span></div><div class="kpi-number" id="kpiLink">CONNECTED</div><div class="kpi-foot" id="kpiLinkFoot">Simulated link · no actual RF</div></article>
     <article class="card kpi"><div class="kpi-top"><span>Packets received</span><span class="kpi-icon">↔</span></div><div class="kpi-number" id="kpiPackets">001</div><div class="kpi-foot">Simulated packets delivered</div></article>
     <article class="card kpi"><div class="kpi-top"><span>Receiver last seen</span><span class="kpi-icon">◷</span></div><div class="kpi-number" id="kpiSeen">Just now</div><div class="kpi-foot" id="kpiSeenFoot">Local browser clock</div></article>
   </section>
@@ -94,7 +96,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
         <div class="control-row"><label for="vibrationSlider">Vibration anomaly</label><span class="control-reading"><span id="vibrationControl">12</span> / 100</span><input id="vibrationSlider" class="slider" type="range" min="0" max="100" value="12"/><span class="control-help">Increase to simulate unusual vibration activity.</span></div>
       </div>
       <div class="scenario-grid"><button class="btn warm" id="rainBtn">☂ Simulate heavy rain</button><button class="btn red" id="tiltBtn">↗ Simulate slope shift</button><button class="btn" id="vibrationBtn">〰 Vibration burst</button><button class="btn" id="normalBtn">↺ Reset to baseline</button><button class="btn full" id="packetBtn">Send simulated packet now →</button></div>
-      <div class="link-panel"><div class="link-left"><div class="link-symbol" id="linkSymbol">↔</div><div><div class="link-title" id="linkTitle">Simulated radio connected</div><div class="link-sub" id="linkSub">Receiver is getting sensor packets</div></div></div><button class="toggle" id="linkToggle">Disconnect</button></div>
+      <div class="link-panel"><div class="link-left"><div class="link-symbol" id="linkSymbol">↔</div><div><div class="link-title" id="linkTitle">Simulated telemetry connected</div><div class="link-sub" id="linkSub">Receiver is getting sensor packets</div></div></div><button class="toggle" id="linkToggle">Disconnect</button></div>
       <p class="tooltip">Try disconnecting the link, then changing a slider. Slider changes update the local node; a packet is sent on release only when the link is connected. The receiver keeps its last accepted packet while disconnected.</p>
       <div class="link-panel" style="margin-top:12px;display:block"><div class="link-title">Simulated communication faults</div><div class="link-sub" id="reliabilitySummary">Backend-only drop, delay, duplicate, stale, and queue controls.</div><div class="scenario-grid" style="margin-top:10px"><button class="small-btn" id="dropPacketBtn">Drop packet</button><button class="small-btn" id="delayPacketBtn">Delay packet</button><button class="small-btn" id="releasePacketBtn">Release next</button><button class="small-btn" id="duplicatePacketBtn">Duplicate test</button><button class="small-btn" id="stalePacketBtn">Stale test</button></div></div>
       </div></section>
@@ -106,23 +108,71 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   "vibration_level": 12,
   "battery_pct": 82,
   "risk": "NORMAL",
-  "transport": "SIMULATED_LORA"
+  "transport": "BROWSER_SIMULATION"
 }</pre><button class="small-btn copy-packet" id="copyPacketBtn" type="button">Copy latest JSON</button><div class="tooltip">This packet is generated in the browser; it is not transmitted over a physical radio.</div><div class="packet-import"><label for="manualPacketInput">Optional: import one JSON line from Wokwi Serial Monitor</label><textarea id="manualPacketInput" spellcheck="false" placeholder='{"node_id":"HR-01","sequence":2,"soil_moisture_pct":70,"tilt_deg":5.5,"vibration_level":85,"battery_pct":82,"transport":"WOKWI_SOFTWARE_SIMULATION"}'></textarea><div class="import-actions"><button class="small-btn" id="loadPacketBtn" type="button">Import virtual ESP32 packet →</button><span class="micro">Manual copy/paste only; this does not create a live connection between Wokwi and this page.</span></div><div class="feedback" id="feedback" role="status" aria-live="polite" hidden></div></div></div></section>
       <section class="card"><div class="card-head"><div><h3>Monitoring station overview</h3><p>Each virtual station keeps its own scenario, sequence, receiver state, and history.</p></div><span class="tag">SCHEMATIC</span></div><div class="zones" id="zones"><div class="zone"><span class="zone-dot"></span><div><div class="zone-name">HR-01 · Virtual Station 1</div><div class="zone-desc">No data yet</div></div><span class="zone-status">NO DATA</span></div><div class="zone"><span class="zone-dot"></span><div><div class="zone-name">HR-02 · Virtual Station 2</div><div class="zone-desc">No data yet</div></div><span class="zone-status">NO DATA</span></div><div class="zone"><span class="zone-dot"></span><div><div class="zone-name">HR-03 · Virtual Station 3</div><div class="zone-desc">No data yet</div></div><span class="zone-status">NO DATA</span></div></div></section>
     </div>
   </div>
+  <section class="section-title" id="tinyml-v2"><h2>Multi-Parameter Geotechnical Intelligence</h2><p>Sixteen model features across eight environmental groups, with an on-device synthetic TinyML demonstration model and independent device-health status.</p></section>
+  <section class="card v2-panel">
+    <div class="card-head"><div><h3>V2 sensor and TinyML console</h3><p>Runs deterministic backend demonstration scenarios; it is separate from the embedded Wokwi iframe.</p></div><span class="v2-status" id="v2-status">Backend not checked</span></div>
+    <div class="body">
+      <div class="v2-controls">
+        <label for="v2-station" class="micro">Station</label>
+        <select id="v2-station"><option>HR-01</option><option>HR-02</option><option>HR-03</option></select>
+        <button class="small-btn" data-v2-scenario="normal">Normal</button>
+        <button class="small-btn" data-v2-scenario="heavy_rain">Heavy rain</button>
+        <button class="small-btn" data-v2-scenario="slope_shift">Slope shift</button>
+        <button class="small-btn" data-v2-scenario="vibration_burst">Vibration burst</button>
+      </div>
+      <div class="v2-subtitle">Environmental parameter groups</div>
+      <div class="v2-grid">
+        <div class="v2-item"><strong>Rainfall intensity</strong><span id="v2-rain">—</span><small>mm/hour · virtual input</small></div>
+        <div class="v2-item"><strong>Rainfall accumulation (1 h)</strong><span id="v2-rain1">—</span><small>mm · simulated history</small></div>
+        <div class="v2-item"><strong>Rainfall accumulation (24 h)</strong><span id="v2-rain24">—</span><small>mm · seeded scenario profile</small></div>
+        <div class="v2-item"><strong>Surface soil moisture</strong><span id="v2-surface">—</span><small>% · virtual analog proxy</small></div>
+        <div class="v2-item"><strong>Subsurface soil moisture</strong><span id="v2-subsurface">—</span><small>% · virtual analog proxy</small></div>
+        <div class="v2-item"><strong>Pore-water pressure</strong><span id="v2-pore">—</span><small>kPa · virtual analog proxy</small></div>
+        <div class="v2-item"><strong>Tilt X / Tilt Y</strong><span id="v2-tilt">—</span><small>degrees · Y is a derived proxy</small></div>
+        <div class="v2-item"><strong>Tilt change rate</strong><span id="v2-tiltrate">—</span><small>degrees/hour · derived</small></div>
+        <div class="v2-item"><strong>Ground displacement</strong><span id="v2-displacement">—</span><small>mm · tilt-based geometric proxy</small></div>
+        <div class="v2-item"><strong>Displacement rate</strong><span id="v2-disprate">—</span><small>mm/hour · derived</small></div>
+        <div class="v2-item"><strong>Vibration RMS</strong><span id="v2-vibrms">—</span><small>g · button-driven event template</small></div>
+        <div class="v2-item"><strong>Vibration peak</strong><span id="v2-vibpeak">—</span><small>g · button-driven event template</small></div>
+        <div class="v2-item"><strong>Vibration frequency</strong><span id="v2-vibfreq">—</span><small>Hz · proxy, not FFT measurement</small></div>
+        <div class="v2-item"><strong>Soil temperature</strong><span id="v2-temperature">—</span><small>°C · virtual potentiometer proxy</small></div>
+        <div class="v2-item"><strong>Groundwater depth</strong><span id="v2-groundwater">—</span><small>m · derived proxy</small></div>
+        <div class="v2-item"><strong>Battery health</strong><span id="v2-battery">—</span><small>% · separate fixed demo estimate</small></div>
+      </div>
+      <div class="v2-card-grid" style="margin-top:14px">
+        <div class="v2-item"><strong>TinyML / rule-based decision</strong>
+          <div class="v2-subtitle">Model prediction: <span id="v2-prediction">—</span></div>
+          <div class="v2-subtitle">Rule-based assessment: <span id="v2-rule">—</span></div>
+          <div class="v2-subtitle">Final safety-approved state: <span id="v2-final">—</span></div>
+          <div class="v2-meta" id="v2-reasons">Run a scenario to inspect the 16-feature model and the independent rule-based assessment.</div>
+        </div>
+        <div class="v2-item"><strong>Model metadata</strong>
+          <div class="v2-subtitle" id="v2-model-id">Loading model metadata…</div>
+          <div class="v2-meta" id="v2-model-metrics">—</div>
+          <div class="v2-subtitle">Measurement provenance</div>
+          <div class="v2-meta" id="v2-provenance">No scenario loaded.</div>
+        </div>
+      </div>
+      <div class="v2-warning"><strong>Prototype disclosure:</strong> The embedded Decision Tree is trained on synthetic scenario labels. Metrics represent agreement with those synthetic labels, not real landslide prediction accuracy. The Wokwi build uses virtual input proxies: tilt-Y and displacement are derived from tilt, vibration statistics are button-event templates, soil temperature is potentiometer-derived, groundwater is a proxy, and rainfall history is seeded/accelerated. These are not calibrated field instruments. The buttons above submit synthetic scenarios to the local Python backend; they do not directly control the Wokwi iframe.</div>
+    </div>
+  </section>
   <section class="section-title" id="hardware-lab"><h2>Virtual Hardware Laboratory</h2><p>Explore the autonomous ESP32 controller through an interactive virtual hardware environment. Configure public Wokwi URLs in <code>wokwi-config.js</code>; empty entries intentionally show setup guidance.</p></section>
   <section class="card"><div class="body">
     <div class="lab-controls" id="wokwiTabs"></div>
     <div class="lab-grid"><div class="lab-frame" id="wokwiFrame"><div class="lab-empty"><div><strong>Simulator not configured</strong><span>Publish the selected station in Wokwi, then add its official public embed URL to <code>wokwi-config.js</code>.</span></div></div></div>
-      <div class="lab-side"><div class="card"><div class="card-head"><div><h3>Virtual circuit</h3><p>Simulated inputs, not field measurements</p></div></div><div class="body"><p class="lab-note">Three potentiometers represent moisture, tilt and battery. The blue pushbutton produces a vibration burst. LEDs and the buzzer show autonomous local responses even when communication is unavailable.</p><table class="pin-table"><tr><td>Moisture ADC</td><td>GPIO 34</td></tr><tr><td>Tilt ADC</td><td>GPIO 35</td></tr><tr><td>Battery ADC</td><td>GPIO 32</td></tr><tr><td>Vibration</td><td>GPIO 18</td></tr><tr><td>LEDs / buzzer</td><td>25 / 26 / 27 / 23</td></tr></table></div></div>
+      <div class="lab-side"><div class="card"><div class="card-head"><div><h3>Virtual circuit</h3><p>Simulated inputs, not field measurements</p></div></div><div class="body"><p class="lab-note">Six ADC1 potentiometers represent rainfall intensity, surface moisture, tilt-X, soil-temperature proxy, subsurface moisture and pore-pressure proxy. The blue pushbutton injects a vibration event. Tilt-Y, displacement, rates, groundwater and vibration metrics are explicitly derived or scenario proxies. Battery is a separate fixed demo-health estimate.</p><table class="pin-table"><tr><td>Rainfall intensity proxy</td><td>GPIO 33</td></tr><tr><td>Surface moisture</td><td>GPIO 34</td></tr><tr><td>Tilt-X proxy</td><td>GPIO 35</td></tr><tr><td>Soil-temperature proxy</td><td>GPIO 32</td></tr><tr><td>Subsurface moisture</td><td>GPIO 36</td></tr><tr><td>Pore-pressure proxy</td><td>GPIO 39</td></tr><tr><td>Vibration event button</td><td>GPIO 18</td></tr><tr><td>Battery</td><td>Fixed demo estimate</td></tr><tr><td>LEDs / buzzer</td><td>25 / 26 / 27 / 23</td></tr></table></div></div>
       <div class="card"><div class="card-head"><div><h3>Scenarios</h3><p>Run these inside Wokwi</p></div></div><div class="body lab-note">Normal baseline · moisture increase · slope shift · vibration burst · critical combination · sensor fault · network failure · recovery. Open Wokwi's Serial Monitor to inspect structured firmware diagnostics.</div></div></div>
     </div>
   </div></section>
   <section class="section-title" id="architecture"><h2>Embedded System Architecture</h2><p>Signals move from virtual interfaces through local processing and autonomous response before optional HTTPS delivery.</p></section>
-  <section class="card"><div class="body"><div class="architecture"><div class="arch-node"><strong>Sensor inputs</strong><span>Potentiometers + vibration event</span></div><div class="arch-node"><strong>ESP32 acquisition</strong><span>ADC validation and filtering</span></div><div class="arch-node"><strong>Decision engine</strong><span>Explainable rule-based state</span></div><div class="arch-node"><strong>Local actuators</strong><span>LEDs and buzzer stay local</span></div><div class="arch-node"><strong>State machine</strong><span>Hysteresis and recovery</span></div><div class="arch-node"><strong>Wi-Fi / HTTPS</strong><span>Verified TLS transport</span></div><div class="arch-node"><strong>Bounded queue</strong><span>Retry, backoff, 409 safeguards</span></div><div class="arch-node"><strong>Dashboard</strong><span>Backend-connected telemetry</span></div></div><div class="state-strip" style="margin-top:15px"><span>BOOT</span><span>INITIALIZING</span><span class="active">NORMAL</span><span>WARNING</span><span>CRITICAL</span><span>SENSOR_FAULT</span><span>COMMUNICATION_DEGRADED</span><span>RECOVERY</span></div></div></section>
+  <section class="card"><div class="body"><div class="architecture"><div class="arch-node"><strong>Sensor inputs</strong><span>Potentiometers + vibration event</span></div><div class="arch-node"><strong>ESP32 acquisition</strong><span>ADC validation and filtering</span></div><div class="arch-node"><strong>TinyML + safety rules</strong><span>16-feature local inference and conservative rule fusion</span></div><div class="arch-node"><strong>Local actuators</strong><span>LEDs and buzzer stay local</span></div><div class="arch-node"><strong>State machine</strong><span>Hysteresis and recovery</span></div><div class="arch-node"><strong>Wi-Fi / HTTPS</strong><span>Verified TLS transport</span></div><div class="arch-node"><strong>Bounded queue</strong><span>Retry, backoff, 409 safeguards</span></div><div class="arch-node"><strong>Dashboard</strong><span>Backend-connected telemetry</span></div></div><div class="state-strip" style="margin-top:15px"><span>BOOT</span><span>INITIALIZING</span><span class="active">NORMAL</span><span>WARNING</span><span>CRITICAL</span><span>SENSOR_FAULT</span><span>COMMUNICATION_DEGRADED</span><span>RECOVERY</span></div></div></section>
   <section class="section-title"><h2>Engineering boundaries</h2><p>Implemented capabilities are separated from future work so the demonstration remains technically defensible.</p></section>
-  <section class="card limitations"><div class="body"><strong>Transparent limitations:</strong> this is virtual hardware and software simulation only. It has no physical ESP32, field sensors, LoRa radio, non-volatile queue, scientific calibration, or trained ML model. The landslide use case is an illustrative rule-based demonstration, not a validated prediction system.</div></section>
+  <section class="card limitations"><div class="body"><strong>Transparent limitations:</strong> this is virtual hardware and software simulation only. It has no physical ESP32, calibrated field sensors, physical LoRa radio, or field validation. A compact Decision Tree is trained on synthetic demonstration scenarios and exported to C++; its metrics are synthetic-label agreement, not real landslide prediction accuracy. Several Wokwi features (tilt-Y, displacement, vibration metrics, groundwater and rainfall history) are derived or seeded simulation proxies, not direct instrument measurements.</div></section>
   <footer class="footer"><span>HimRakshak · zero-budget software demonstration</span><span>For hackathon prototyping only · field deployment requires validation</span></footer>
 </main>
 </div>
@@ -267,7 +317,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     const assessment = evaluate(state.moisture, state.tilt, state.vibration);
     state.received = {
       ...reading, ...assessment, sequence: state.sequence,
-      received_at: isoNow(), receivedAtMs: Date.now(), transport: 'SIMULATED_LORA'
+      received_at: isoNow(), receivedAtMs: Date.now(), transport: 'BROWSER_SIMULATION'
     };
     state.lastReceivedAt = Date.now();
     pushLog(event, assessment, 'RECEIVED', reading);
@@ -650,7 +700,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     $('kpiLink').textContent = state.mode === 'standalone' ? (state.connected ? 'CONNECTED' : 'LOST LINK') : state.apiAvailable ? (state.connected ? 'CONNECTED' : 'LOST LINK') : 'UNAVAILABLE';
     $('kpiLink').style.color = linkReady ? 'var(--green)' : 'var(--red)';
     $('kpiLinkFoot').textContent = state.mode === 'standalone' ? (state.connected ? 'Simulated link · no actual RF' : 'No new simulated packets delivered') : state.apiAvailable ? 'Backend station connection state' : 'Backend connection unavailable';
-    $('linkTitle').textContent = state.mode === 'standalone' ? (state.connected ? 'Simulated radio connected' : 'Simulated radio disconnected') : state.apiAvailable ? (state.connected ? 'Backend station connected' : 'Backend station disconnected') : 'Backend connection unavailable';
+    $('linkTitle').textContent = state.mode === 'standalone' ? (state.connected ? 'Simulated telemetry connected' : 'Simulated radio disconnected') : state.apiAvailable ? (state.connected ? 'Backend station connected' : 'Backend station disconnected') : 'Backend connection unavailable';
     $('linkSub').textContent = state.mode === 'standalone' ? (state.connected ? 'Packets can be sent in this browser demo' : 'Local node changes; receiver data is frozen') : state.apiAvailable ? 'Packets are sent to the Python API' : 'Last known server state is preserved';
     $('linkSymbol').style.background = linkReady ? 'var(--soft-green)' : 'var(--soft-red)';
     $('linkSymbol').style.color = linkReady ? 'var(--green)' : 'var(--red)';
@@ -687,7 +737,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       risk: r.level,
       risk_score_demo: r.score,
       reasons: r.reasons,
-      transport: r.transport || 'SIMULATED_LORA'
+      transport: r.transport || 'BROWSER_SIMULATION'
     };
     $('packetJson').textContent = JSON.stringify(packet, null, 2);
     const zone = $('zones').firstElementChild;
@@ -927,7 +977,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     for (let i=0;i<11;i++) state.history.push({m:29+Math.round(Math.sin(i*.6)*3),t:1.0+Math.abs(Math.sin(i*.4))*.5,v:10+Math.round(Math.abs(Math.cos(i*.5))*5)});
     state.history.push({m:state.moisture,t:state.tilt,v:state.vibration});
     const firstReading = currentReading();
-    state.received = {...firstReading,...localAssessment(),sequence:state.sequence,received_at:isoNow(),receivedAtMs:Date.now(),transport:'SIMULATED_LORA'};
+    state.received = {...firstReading,...localAssessment(),sequence:state.sequence,received_at:isoNow(),receivedAtMs:Date.now(),transport:'BROWSER_SIMULATION'};
     pushLog('Simulator started',localAssessment(),'RECEIVED',firstReading);
   }
   saveCurrentStation();
@@ -980,5 +1030,93 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   render(stations[0][0]);
 })();
 </script>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const valueMap = [
+    ['v2-rain','rainfall_intensity_mm_h',1], ['v2-rain1','rainfall_1h_mm',1],
+    ['v2-rain24','rainfall_24h_mm',1], ['v2-surface','soil_moisture_surface_pct',1],
+    ['v2-subsurface','soil_moisture_subsurface_pct',1], ['v2-pore','pore_water_pressure_kpa',1],
+    ['v2-tiltrate','tilt_rate_deg_per_h',2], ['v2-displacement','ground_displacement_mm',2],
+    ['v2-disprate','ground_displacement_rate_mm_per_h',2], ['v2-vibrms','vibration_rms_g',3],
+    ['v2-vibpeak','vibration_peak_g',3], ['v2-vibfreq','vibration_dominant_hz',1],
+    ['v2-temperature','soil_temperature_c',1], ['v2-groundwater','groundwater_depth_m',2],
+    ['v2-battery','battery_pct',1]
+  ];
+  function setStatus(text, kind) {
+    const el = $('v2-status'); if (!el) return;
+    el.textContent = text; el.className = 'v2-status' + (kind ? ' ' + kind : '');
+  }
+  function setText(id, value) { const el = $(id); if (el) el.textContent = value; }
+  function fmt(value, digits) { return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'Unavailable'; }
+  function renderResult(result) {
+    const reading = result && result.reading ? result.reading : {};
+    const assessment = result && result.assessment ? result.assessment : {};
+    valueMap.forEach(([id, field, digits]) => setText(id, fmt(reading[field], digits)));
+    setText('v2-tilt', `${fmt(reading.tilt_x_deg,2)}° / ${fmt(reading.tilt_y_deg,2)}°`);
+    const prediction = assessment.tinyml_prediction;
+    const labels = ['NORMAL','WARNING','CRITICAL'];
+    setText('v2-prediction', Number.isInteger(prediction) && prediction >= 0 ? labels[prediction] : 'MODEL NOT READY');
+    setText('v2-rule', assessment.rule_based_level || '—');
+    setText('v2-final', assessment.risk_level || '—');
+    setText('v2-reasons', Array.isArray(assessment.reasons) ? assessment.reasons.join(' · ') : 'No assessment reasons returned.');
+    setText('v2-provenance', `${reading.measurement_provenance || 'Unknown'} · ${reading.rainfall_history_mode || 'No history metadata'} · simulated=${reading.is_simulated === true}`);
+    setStatus('V2 scenario received · ' + (reading.node_id || ''), assessment.risk_level === 'CRITICAL' ? 'bad' : assessment.risk_level === 'WARNING' ? 'warn' : 'ok');
+  }
+  async function loadModel() {
+    try {
+      const response = await fetch('/api/v2/model', {headers:{'Accept':'application/json'}});
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const model = await response.json();
+      setText('v2-model-id', `${model.model_id || 'Model unavailable'} · ${model.model_version || ''}`);
+      const metric = model.selected_metrics || {};
+      const accuracy = typeof metric.accuracy === 'number' ? (metric.accuracy * 100).toFixed(1) + '%' : 'n/a';
+      const recall = typeof metric.critical_recall === 'number' ? (metric.critical_recall * 100).toFixed(1) + '%' : 'n/a';
+      setText('v2-model-metrics', `Synthetic test agreement: ${accuracy} · Critical synthetic-label recall: ${recall} · Dataset: ${model.dataset_rows || 'see training metrics'} rows · Field validated: ${model.field_validated === true ? 'yes' : 'no'}`);
+    } catch (error) {
+      setText('v2-model-id', 'Local backend unavailable');
+      setText('v2-model-metrics', 'Start the Python backend to load model metadata.');
+      setStatus('Backend unavailable', 'warn');
+    }
+  }
+  async function runScenario(scenario) {
+    const station = $('v2-station') ? $('v2-station').value : 'HR-01';
+    setStatus('Running ' + scenario + '…', 'warn');
+    document.querySelectorAll('[data-v2-scenario]').forEach(button => button.disabled = true);
+    try {
+      const response = await fetch('/api/v2/demo', {
+        method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify({station_id:station, scenario})
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message || 'HTTP ' + response.status);
+      renderResult(payload);
+    } catch (error) {
+      setStatus('Scenario failed', 'bad');
+      setText('v2-reasons', error.message + '. Run `python -m himrakshak.server` locally and retry.');
+    } finally {
+      document.querySelectorAll('[data-v2-scenario]').forEach(button => button.disabled = false);
+    }
+  }
+  async function refreshStation() {
+    try {
+      const response = await fetch('/api/stations', {headers:{'Accept':'application/json'}});
+      if (!response.ok) return;
+      const data = await response.json();
+      const station = (data.stations || []).find(item => item.node_id === ($('v2-station')?.value || 'HR-01'));
+      if (station && station.latest) renderResult(station.latest);
+    } catch (_) { /* standalone mode is intentionally supported */ }
+  }
+  document.querySelectorAll('[data-v2-scenario]').forEach(button => {
+    button.addEventListener('click', () => runScenario(button.dataset.v2Scenario));
+  });
+  if ($('v2-station')) $('v2-station').addEventListener('change', refreshStation);
+  loadModel(); refreshStation();
+  window.setInterval(refreshStation, 5000);
+})();
+</script>
+
 </body>
 </html>

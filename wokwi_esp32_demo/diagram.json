@@ -4,47 +4,13 @@
   "editor": "wokwi",
   "parts": [
     {
-      "type": "wokwi-esp32-devkit-v1",
-      "id": "esp",
-      "top": 0,
-      "left": 145,
-      "attrs": {}
-    },
-    {
       "type": "wokwi-potentiometer",
-      "id": "potMoist",
-      "top": -55,
+      "id": "potRain",
+      "top": -210,
       "left": -100,
       "attrs": {
-        "value": "500"
-      }
-    },
-    {
-      "type": "wokwi-potentiometer",
-      "id": "potTilt",
-      "top": 90,
-      "left": -100,
-      "attrs": {
-        "value": "250"
-      }
-    },
-    {
-      "type": "wokwi-potentiometer",
-      "id": "potBattery",
-      "top": 235,
-      "left": -100,
-      "attrs": {
-        "value": "875"
-      }
-    },
-    {
-      "type": "wokwi-pushbutton",
-      "id": "vibButton",
-      "top": 195,
-      "left": -25,
-      "attrs": {
-        "color": "blue",
-        "label": "VIBRATION BURST"
+        "value": "550",
+        "label": "RAINFALL INTENSITY"
       }
     },
     {
@@ -58,6 +24,25 @@
       }
     },
     {
+      "type": "wokwi-resistor",
+      "id": "rGreen",
+      "top": -92,
+      "left": 330,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potMoist",
+      "top": -55,
+      "left": -100,
+      "attrs": {
+        "value": "500",
+        "label": "SURFACE MOISTURE"
+      }
+    },
+    {
       "type": "wokwi-led",
       "id": "ledYellow",
       "top": -30,
@@ -66,6 +51,32 @@
         "color": "yellow",
         "label": "WARNING"
       }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rYellow",
+      "top": -27,
+      "left": 330,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potSubsoil",
+      "top": -15,
+      "left": -100,
+      "attrs": {
+        "value": "650",
+        "label": "SUBSURFACE MOISTURE"
+      }
+    },
+    {
+      "type": "wokwi-esp32-devkit-v1",
+      "id": "esp",
+      "top": 0,
+      "left": 145,
+      "attrs": {}
     },
     {
       "type": "wokwi-led",
@@ -79,29 +90,31 @@
     },
     {
       "type": "wokwi-resistor",
-      "id": "rGreen",
-      "top": -92,
-      "left": 330,
-      "attrs": {
-        "value": "220"
-      }
-    },
-    {
-      "type": "wokwi-resistor",
-      "id": "rYellow",
-      "top": -27,
-      "left": 330,
-      "attrs": {
-        "value": "220"
-      }
-    },
-    {
-      "type": "wokwi-resistor",
       "id": "rRed",
       "top": 38,
       "left": 330,
       "attrs": {
         "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potTilt",
+      "top": 90,
+      "left": -100,
+      "attrs": {
+        "value": "250",
+        "label": "SLOPE TILT X"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potPore",
+      "top": 130,
+      "left": -100,
+      "attrs": {
+        "value": "450",
+        "label": "PORE PRESSURE"
       }
     },
     {
@@ -111,6 +124,26 @@
       "left": 385,
       "attrs": {
         "volume": "0.1"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "vibButton",
+      "top": 195,
+      "left": -25,
+      "attrs": {
+        "color": "blue",
+        "label": "VIBRATION BURST"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "potTemp",
+      "top": 235,
+      "left": -100,
+      "attrs": {
+        "value": "1350",
+        "label": "SOIL TEMPERATURE"
       }
     }
   ],
@@ -164,7 +197,7 @@
       ]
     ],
     [
-      "potBattery:VCC",
+      "potTemp:VCC",
       "esp:3V3",
       "red",
       [
@@ -172,7 +205,7 @@
       ]
     ],
     [
-      "potBattery:GND",
+      "potTemp:GND",
       "esp:GND.1",
       "black",
       [
@@ -180,7 +213,7 @@
       ]
     ],
     [
-      "potBattery:SIG",
+      "potTemp:SIG",
       "esp:32",
       "green",
       [
@@ -287,6 +320,78 @@
       "buzzer:2",
       "esp:GND.1",
       "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potRain:VCC",
+      "esp:3V3",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potRain:GND",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potRain:SIG",
+      "esp:33",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potSubsoil:VCC",
+      "esp:3V3",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potSubsoil:GND",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potSubsoil:SIG",
+      "esp:36",
+      "green",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potPore:VCC",
+      "esp:3V3",
+      "red",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potPore:GND",
+      "esp:GND.1",
+      "black",
+      [
+        "v0"
+      ]
+    ],
+    [
+      "potPore:SIG",
+      "esp:39",
+      "green",
       [
         "v0"
       ]

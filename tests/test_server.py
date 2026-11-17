@@ -63,6 +63,24 @@ class ServerTests(unittest.TestCase):
         self.assertIsNone(state["latest"])
         self.assertEqual(state["events"], [])
 
+
+    def test_v2_model_features_and_demo_endpoints(self):
+        status, features = self.request("GET", "/api/v2/features")
+        self.assertEqual(status, 200)
+        self.assertEqual(features["sensor_schema_version"], 2)
+        self.assertEqual(len(features["features"]), 16)
+        status, model = self.request("GET", "/api/v2/model")
+        self.assertEqual(status, 200)
+        self.assertEqual(model["status"], "TRAINED_SYNTHETIC_DEMO_MODEL")
+        self.assertFalse(model["field_validated"])
+        self.assertEqual(model["dataset_rows"], 2400)
+        for scenario, expected in (("normal", "NORMAL"), ("heavy_rain", "WARNING"), ("slope_shift", "CRITICAL"), ("vibration_burst", "WARNING")):
+            status, result = self.request("POST", "/api/v2/demo", {"station_id": "HR-02", "scenario": scenario})
+            self.assertEqual(status, 200)
+            self.assertEqual(result["reading"]["sensor_schema_version"], 2)
+            self.assertEqual(result["assessment"]["risk_level"], expected)
+            self.assertTrue(result["reading"]["is_simulated"])
+
     def test_canonical_and_alias_ingestion(self):
         status, result = self.request("POST", "/api/readings", self.packet())
         self.assertEqual(status, 200)

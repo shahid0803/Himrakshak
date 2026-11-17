@@ -3,12 +3,14 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 import tempfile
 import unittest
+from pathlib import Path
 
 from himrakshak.data_intelligence.ml.datasets import training_status
 from himrakshak.data_intelligence.processors.rainfall import accumulate_rainfall
 from himrakshak.data_intelligence.quality import validate_coordinate, validate_observation
 from himrakshak.data_intelligence.registry import PARAMETER_REGISTRY
 from himrakshak.data_intelligence.storage import IntelligenceStore
+from himrakshak.data_intelligence.pipeline import run as pipeline_run
 
 
 class DataIntelligenceTests(unittest.TestCase):
@@ -48,7 +50,7 @@ class DataIntelligenceTests(unittest.TestCase):
 
     def test_sqlite_store_deduplicates_observations(self):
         with tempfile.TemporaryDirectory() as directory:
-            store = IntelligenceStore(f"{directory}\\intelligence.sqlite3")
+            store = IntelligenceStore(Path(directory) / "intelligence.sqlite3")
             row = {
                 "observation_id": "obs-1", "station_id": None, "longitude": 75.1,
                 "latitude": 33.2, "parameter_id": "air_temperature", "value": 12.0,
@@ -59,6 +61,13 @@ class DataIntelligenceTests(unittest.TestCase):
             }
             self.assertEqual(store.insert_observations([row, row]), 2)
             self.assertEqual(len(store.latest()), 1)
+
+
+    def test_pipeline_does_not_report_ready_without_source_observations(self):
+        result = pipeline_run("all")
+        self.assertEqual(result["status"], "NO_SOURCE_DATA_IMPORTED")
+        self.assertFalse(result["source_data_available"])
+        self.assertFalse(result["model_training_enabled"])
 
 
 if __name__ == "__main__":

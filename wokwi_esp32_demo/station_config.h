@@ -9,3 +9,6 @@
 // Set to 1 only when deliberately demonstrating the SENSOR_FAULT state.
 // Return to 0 for the normal simulation.
 #define HIMRAKSHAK_SIMULATE_SENSOR_FAULT 0
+
+// Battery is a separate simulated device-health estimate (not an environmental ML feature).
+#define HIMRAKSHAK_DEMO_BATTERY_PCT 88

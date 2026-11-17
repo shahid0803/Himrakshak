@@ -15,6 +15,13 @@ class FrontendContractTests(unittest.TestCase):
             "COMMUNICATION_DEGRADED",
             "Sensor inputs",
             "Simulator not configured",
+            "Multi-Parameter Geotechnical Intelligence",
+            "on-device synthetic TinyML demonstration",
+            "data-v2-scenario",
+            "rainfall_history_mode",
+            "Prototype disclosure",
+            "soil-temperature proxy",
+            "pore-pressure proxy",
         ):
             self.assertIn(marker, source)
 
@@ -23,6 +30,12 @@ class FrontendContractTests(unittest.TestCase):
         for station in ("HR-01", "HR-02", "HR-03"):
             self.assertIn('"' + station + '"', source)
         self.assertNotIn("wokwi.com/projects/", source)
+
+    def test_root_and_pages_entry_points_are_identical(self):
+        self.assertEqual(
+            (ROOT / "index.html").read_bytes(),
+            (ROOT / "site" / "index.html").read_bytes(),
+        )
 
 
 if __name__ == "__main__":

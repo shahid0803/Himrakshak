@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 from himrakshak.data_intelligence.collectors.dem import process_dem
+from himrakshak.data_intelligence.collectors.weather import to_observations
 from himrakshak.data_intelligence.collectors.imd import climatology, import_csv
 from himrakshak.data_intelligence.collectors.landslides import (
     import_csv as import_landslides_csv,
@@ -59,6 +60,26 @@ class Phase182Tests(unittest.TestCase):
             self.assertIsNotNone(features[4]["slope_angle"])
             self.assertIsNotNone(features[4]["terrain_curvature"])
 
+    def test_open_meteo_precipitation_rain_snow_and_moisture_units(self):
+        payload = {
+            "hourly": {
+                "time": ["2026-11-17T10:00"],
+                "rain": [3.0],
+                "precipitation": [5.0],
+                "snowfall": [0.2],
+                "snow_depth": [8.0],
+                "soil_moisture_0_to_7cm": [0.25],
+            }
+        }
+        rows = to_observations(payload, retrieved_at="2026-11-17T11:00:00Z")
+        by_parameter = {row["parameter_id"]: row for row in rows}
+        self.assertEqual(by_parameter["rainfall_accumulation_1h"]["value"], 3.0)
+        self.assertEqual(by_parameter["rainfall_accumulation_1h"]["unit"], "mm")
+        self.assertEqual(by_parameter["precipitation_accumulation_1h"]["value"], 5.0)
+        self.assertEqual(by_parameter["snow_depth"]["unit"], "cm")
+        self.assertEqual(by_parameter["shallow_soil_moisture"]["unit"], "m3/m3")
+        self.assertNotIn("snow_cover_percentage", by_parameter)
+
     def test_imd_csv_preserves_missing_values_and_climatology(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "rain.csv"
@@ -72,6 +93,7 @@ class Phase182Tests(unittest.TestCase):
 
     def test_landslide_records_are_persisted_with_provenance(self):
         store = IntelligenceStore(":memory:")
+        self.addCleanup(store.close)
         records = [{
             "event_id": "a", "longitude": 75.1, "latitude": 33.2,
             "event_date": "2024-07-01T00:00:00", "source": "NRSC",

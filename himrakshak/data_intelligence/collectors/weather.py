@@ -38,12 +38,19 @@ def to_observations(payload: dict[str, Any], *, retrieved_at: str | None = None)
     hourly = payload.get("hourly", {})
     times = hourly.get("time", [])
     retrieved = retrieved_at or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    # Open-Meteo reports hourly precipitation and rain as accumulated depth
+    # for that interval (mm), not an instantaneous intensity (mm/hour).
+    # Total precipitation includes liquid and solid precipitation; use the
+    # dedicated `rain` series for rainfall-only accumulation.
     variables = {
-        "precipitation": ("rainfall_intensity_1h", "mm"),
+        "rain": ("rainfall_accumulation_1h", "mm"),
+        "precipitation": ("precipitation_accumulation_1h", "mm"),
         "temperature_2m": ("air_temperature", "deg C"),
         "snowfall": ("snowfall", "cm"),
-        "snow_depth": ("snow_cover_percentage", "cm"),
-        "soil_moisture_0_to_7cm": ("shallow_soil_moisture", "% VWC"),
+        "snow_depth": ("snow_depth", "cm"),
+        # SoilGrids/Open-Meteo volumetric water content is a fraction in m3/m3,
+        # not a percentage. Keep the source unit; convert explicitly if needed.
+        "soil_moisture_0_to_7cm": ("shallow_soil_moisture", "m3/m3"),
     }
     observations = []
     for index, timestamp in enumerate(times):
