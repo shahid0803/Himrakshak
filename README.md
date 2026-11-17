@@ -1,6 +1,10 @@
 # HimRakshak
 
-**An offline-first, software-only landslide monitoring and early-warning prototype for mountainous regions.**
+**Autonomous Edge Intelligence for Next-Generation Embedded Monitoring Systems.**
+
+HimRakshak is a virtual ESP32-based autonomous embedded intelligence platform
+demonstrating sensor acquisition, local rule-based processing, autonomous
+responses, fault-tolerant communication, and distributed virtual nodes.
 
 HimRakshak demonstrates how virtual slope-monitoring stations can send sensor-like readings to a dashboard, receive an explainable demonstration risk assessment, and simulate communication failures. The project is designed as an academic and hackathon prototype—not as a field-deployed or life-critical warning system.
 
@@ -25,6 +29,17 @@ HimRakshak demonstrates how virtual slope-monitoring stations can send sensor-li
 **Do not use HimRakshak to make real-world evacuation, road-closure, or public-safety decisions.**
 
 ## Implemented features
+
+### Theme 3 embedded transformation
+
+- ESP32-local state machine with sensor validation, exponential filtering,
+  stuck-input detection, hysteresis, structured diagnostics, and autonomous
+  LED/buzzer responses.
+- Responsive DeepTech landing page with architecture flow, engineering
+  boundaries, virtual hardware laboratory, station tabs, and safe Wokwi
+  configuration fallback.
+- Public Wokwi URLs are optional and centralized in `wokwi-config.js`; no
+  project IDs or live hardware are fabricated.
 
 ### Dashboard
 

@@ -1,5 +1,15 @@
 # HimRakshak final release report
 
+## Autonomous edge transformation
+
+The landing page now presents the ESP32 controller as the primary system
+component, with architecture flow, virtual hardware laboratory, station
+profiles, safe Wokwi embed configuration, and explicit simulation limitations.
+Firmware adds filtered acquisition, health diagnostics, state-machine
+transitions, local warning/critical patterns, and communication-degraded
+visibility while preserving the existing HTTPS/TLS, queue, retry, and 409
+reconciliation behavior.
+
 ## Completed phases
 
 | Phase | Description | Status |

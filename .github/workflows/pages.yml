@@ -31,8 +31,10 @@ jobs:
           rm -rf site
           mkdir -p site
           cp index.html site/index.html
+          cp wokwi-config.js site/wokwi-config.js
           test -s site/index.html
-          test "$(find site -maxdepth 1 -type f | wc -l)" -eq 1
+          test -s site/wokwi-config.js
+          test "$(find site -maxdepth 1 -type f | wc -l)" -eq 2
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4

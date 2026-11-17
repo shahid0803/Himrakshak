@@ -1,9 +1,11 @@
-# Virtual ESP32 cloud sender for HimRakshak
+# Virtual ESP32 autonomous edge controller for HimRakshak
 
 This companion project demonstrates the software path from simulated ESP32
 inputs to the deployed HimRakshak API. It uses Wokwi's simulated
 `Wokwi-GUEST` network and HTTPS; it does not simulate physical LoRa or field
-sensors.
+sensors. The firmware now reports filtered acquisition, sensor health,
+rule-based decisions, state transitions, local actuator responses, and
+communication status in the Serial Monitor.
 
 ## Open it in Wokwi
 
@@ -49,7 +51,11 @@ Do not run two senders with the same station ID.
 - Potentiometer 3 -> battery input (0-100%)
 - Blue pushbutton -> vibration burst (85 while pressed, 12 otherwise)
 - Green/yellow/red LEDs -> Normal/Warning/Critical local assessment
-- Piezo buzzer -> beeps during the Critical local state
+- Piezo buzzer -> warning acknowledgement and Critical local alert patterns
+
+The local state machine includes `BOOT`, `INITIALIZING`, `NORMAL`, `WARNING`,
+`CRITICAL`, `SENSOR_FAULT`, `COMMUNICATION_DEGRADED`, and `RECOVERY`. Local
+LEDs and buzzer operation continues when the backend or Wi-Fi is unavailable.
 
 ## Packet and reliability behavior
 
