@@ -1,0 +1,4 @@
+# Optional offline model training only; production API does not require these.
+scikit-learn>=1.4
+# xgboost>=2.0
+# shap>=0.45

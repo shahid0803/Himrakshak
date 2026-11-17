@@ -1,0 +1,9 @@
+# Optional data processing workers only; keep heavy processing out of the API.
+pandas>=2.0
+geopandas>=0.14
+shapely>=2.0
+rasterio>=1.3
+xarray>=2023.1
+#
+# Source-specific packages may require platform/credential setup:
+# earthaccess, gpm-api, pystac-client, whitebox, imdlib, rioxarray

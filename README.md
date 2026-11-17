@@ -79,6 +79,13 @@ HimRakshak demonstrates how virtual slope-monitoring stations can send sensor-li
 
 There is no React, FastAPI, database, machine-learning model, live weather integration, or physical LoRa driver in the current implementation.
 
+The optional Phase 18 real-data intelligence layer is separate from this
+demonstration runtime. It provides a versioned parameter registry,
+provenance-aware SQLite storage, rainfall gap handling, source adapter
+boundaries, and honest model eligibility reporting without fabricating external
+observations. See [`docs/data-intelligence.md`](docs/data-intelligence.md),
+[`REAL_DATA_SOURCES.md`](REAL_DATA_SOURCES.md), and [`MODEL_REPORT.md`](MODEL_REPORT.md).
+
 ## Repository structure
 
 ```text
