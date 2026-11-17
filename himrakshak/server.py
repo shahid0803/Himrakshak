@@ -18,6 +18,8 @@ from urllib.parse import unquote, urlsplit
 
 from .risk import MODEL_ID
 from .schema import SchemaValidationError
+from .data_intelligence.registry import registry_as_dict
+from .data_intelligence.storage import IntelligenceStore
 from .stations import (
     PendingQueueEmptyError,
     PendingQueueFullError,
@@ -324,6 +326,49 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
                     "model_id": MODEL_ID,
                     "illustrative": True,
                     "station_count": len(STATION_ROSTER),
+                    "data_intelligence": "available",
+                },
+            )
+            return
+        if path == "/api/intelligence/registry":
+            self._send_json(HTTPStatus.OK, registry_as_dict())
+            return
+        if path == "/api/intelligence/observations":
+            parameter_id = urlsplit(self.path).query
+            parameter = None
+            if parameter_id.startswith("parameter_id="):
+                parameter = unquote(parameter_id.split("=", 1)[1])
+            self._send_json(
+                HTTPStatus.OK,
+                {"observations": self.server.intelligence_store.latest(parameter)},  # type: ignore[attr-defined]
+            )
+            return
+        intelligence_tables = {
+            "/api/intelligence/landslides": "landslide_inventory",
+            "/api/intelligence/terrain": "terrain_features",
+            "/api/intelligence/sources": "data_sources",
+            "/api/intelligence/runs": "ingestion_runs",
+        }
+        if path in intelligence_tables:
+            self._send_json(
+                HTTPStatus.OK,
+                {"records": self.server.intelligence_store.table_rows(intelligence_tables[path])},  # type: ignore[attr-defined]
+            )
+            return
+        if path == "/api/intelligence/models":
+            self._send_json(
+                HTTPStatus.OK,
+                {
+                    "models": [
+                        {
+                            "model_type": "susceptibility",
+                            "status": "NOT_TRAINABLE_DUE_TO_INSUFFICIENT_LABELS",
+                        },
+                        {
+                            "model_type": "early_warning",
+                            "status": "NOT_TRAINABLE_DUE_TO_INSUFFICIENT_LABELS",
+                        },
+                    ]
                 },
             )
             return
@@ -560,6 +605,8 @@ class HimRakshakServer(ThreadingHTTPServer):
             )
         self.station_manager = StationManager(seed=seed)
         self.rate_limiter = IngestionRateLimiter(self.config.rate_limit_interval)
+        database_path = os.environ.get("HIMRAKSHAK_INTELLIGENCE_DB", ":memory:")
+        self.intelligence_store = IntelligenceStore(database_path)
         super().__init__((self.config.host, self.config.port), HimRakshakHandler)
 
 

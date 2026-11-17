@@ -40,3 +40,9 @@ HimRakshak-OpenCode/
 *.p12
 *.sqlite
 *.db
+
+# Downloaded real-data inputs and derived files
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
