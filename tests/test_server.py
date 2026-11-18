@@ -81,6 +81,43 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(result["assessment"]["risk_level"], expected)
             self.assertTrue(result["reading"]["is_simulated"])
 
+    def test_v2_backend_previews_are_isolated_from_live_device_stream(self):
+        config = ServerConfig(
+            host="127.0.0.1", port=0, allow_remote=True,
+            admin_key="preview-admin-key", rate_limit_interval=3.0,
+        )
+        server = HimRakshakServer(config, seed=51)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        host, port = server.server_address
+        try:
+            for scenario, expected in (("normal", "NORMAL"), ("heavy_rain", "WARNING"),
+                                        ("slope_shift", "CRITICAL"), ("vibration_burst", "WARNING")):
+                connection = HTTPConnection(host, port, timeout=3)
+                body = json.dumps({"station_id": "HR-01", "scenario": scenario}).encode()
+                connection.request(
+                    "POST", "/api/v2/demo", body=body,
+                    headers={"Content-Type": "application/json",
+                             "X-HimRakshak-Admin": "preview-admin-key"},
+                )
+                response = connection.getresponse()
+                payload = json.loads(response.read())
+                connection.close()
+                self.assertEqual(response.status, 200)
+                self.assertTrue(payload["preview_only"])
+                self.assertEqual(payload["source"], "BACKEND_SYNTHETIC_PREVIEW")
+                self.assertEqual(payload["assessment"]["risk_level"], expected)
+
+            # Previews must not overwrite accepted device telemetry or consume the
+            # per-station limiter used by genuine ESP32 telemetry ingestion.
+            self.assertIsNone(server.station_manager.station_details("HR-01")["latest"])
+            self.assertIsNone(server.rate_limiter.check_and_record("HR-01"))
+            self.assertIsNotNone(server.rate_limiter.check_and_record("HR-01"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_live_wokwi_command_queue_poll_and_ack(self):
         command = {
             "mode": "custom",

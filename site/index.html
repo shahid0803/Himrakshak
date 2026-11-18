@@ -1214,8 +1214,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
       });
       renderResult(payload, 'backend-demo');
     } catch (error) {
-      setStatus('Backend preview failed', 'bad');
-      setText('v2-reasons', error.message + '. Check backend URL and admin key.');
+      const detail = error?.message || 'Unknown API error';
+      setStatus(`Backend preview failed · ${detail}`, 'bad');
+      setText('v2-reasons', `${detail}. The backend preview is separate from live Wokwi telemetry.`);
     } finally {
       document.querySelectorAll('[data-v2-scenario]').forEach(button => button.disabled = false);
     }

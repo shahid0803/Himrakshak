@@ -17,6 +17,7 @@ from typing import Any, Mapping
 from urllib.parse import unquote, urlsplit
 
 from .risk import MODEL_ID
+from .risk_v2 import assess_risk_v2
 from .schema import SchemaValidationError
 from .data_intelligence.registry import registry_as_dict
 from .data_intelligence.storage import IntelligenceStore
@@ -567,22 +568,25 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
                 self._send_error(HTTPStatus.BAD_REQUEST, "station_id and scenario must be strings")
                 return
             try:
-                station = self.manager.get(station_id)
-                retry_after = self.rate_limiter.check_and_record(station_id)
-                if retry_after is not None:
-                    self._send_rate_limit_error(station_id, retry_after)
-                    return
-                packet = make_v2_packet(station_id, station.next_sequence, scenario)
-                result = self.manager.ingest(station_id, packet, f"V2 demo scenario: {scenario}")
-                self._send_json(HTTPStatus.OK, result)
+                # Backend previews are deliberately isolated from the live station
+                # stream. They must not consume the ESP32 ingest rate limit, advance
+                # its sequence counter, or overwrite its latest accepted telemetry.
+                self.manager.get(station_id)
+                packet = make_v2_packet(station_id, 0, scenario)
+                assessment = assess_risk_v2(packet)
+                self._send_json(
+                    HTTPStatus.OK,
+                    {
+                        "reading": packet,
+                        "assessment": assessment,
+                        "source": "BACKEND_SYNTHETIC_PREVIEW",
+                        "preview_only": True,
+                    },
+                )
             except KeyError as exc:
                 self._send_error(HTTPStatus.NOT_FOUND, str(exc))
             except (ValueError, SchemaValidationError) as exc:
                 self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
-            except StationSequenceConflictError as exc:
-                self._send_error(HTTPStatus.CONFLICT, str(exc), {"classification": exc.classification})
-            except StationDisconnectedError as exc:
-                self._send_error(HTTPStatus.CONFLICT, str(exc))
             except Exception:
                 self._send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "V2 demo scenario could not be processed")
             return
