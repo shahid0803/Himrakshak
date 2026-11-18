@@ -4,7 +4,7 @@
 #include <stdint.h>
 namespace HimRakshakTinyML {
 static const char MODEL_ID[] = "himrakshak-synthetic-demo-tree-v2";
-static const char MODEL_SHA256[] = "3514554320c709b507e1b27b2f5df15114d7a0102ef7815d707b1ad5cf298a70";
+static const char MODEL_SHA256[] = "0a45ab36dec217a8fc1477574596c21b034a0011f59f3ca0e9b6e6732f422259";
 static const int NODE_COUNT = 53;
 static const int16_t FEATURE[53] = {
   5, 11, 9, 10, 0, -2, -2, 10, -2, -2, 10, 1, -2, -2, -2, 10, 11, 9, -2, -2, 11, -2, -2, -2, 5, 10, 2, 8, -2, -2, 5, -2, -2, 10, 5, -2, -2, 10, -2, -2, 15, 5, 2, -2, -2, -2, 5, 2, -2, -2, 4, -2, -2

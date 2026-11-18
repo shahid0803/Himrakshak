@@ -109,13 +109,13 @@
       "depth": 6
     }
   ],
-  "sklearn_version": "1.8.0",
-  "trained_at": "2026-11-18T07:11:59.264852Z",
+  "sklearn_version": "1.9.0",
+  "trained_at": "2026-11-18T07:29:57.136536Z",
   "limitations": [
     "Class labels are assigned by explicit illustrative threshold rules after balanced class-conditioned rejection sampling; they are not observed landslide outcomes.",
     "Increasing the synthetic row count increases sampled combinations, not the amount of real-world evidence.",
     "Metrics measure agreement with synthetic labels, not real landslide prediction accuracy.",
     "Soil temperature, groundwater and some motion/vibration fields are virtual or derived demonstration proxies in Wokwi."
   ],
-  "model_sha256": "3514554320c709b507e1b27b2f5df15114d7a0102ef7815d707b1ad5cf298a70"
+  "model_sha256": "0a45ab36dec217a8fc1477574596c21b034a0011f59f3ca0e9b6e6732f422259"
 }
