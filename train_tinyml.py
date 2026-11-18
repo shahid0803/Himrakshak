@@ -86,11 +86,12 @@ def render_header(tree_data: dict, model_sha: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--generate", action="store_true", help="regenerate synthetic dataset")
-    parser.add_argument("--count", type=int, default=2400)
+    parser.add_argument("--count", type=int, default=240000)
+    parser.add_argument("--seed", type=int, default=20261117)
     args = parser.parse_args()
 
     if args.generate or not DATASET.exists():
-        counts = generate(DATASET, count=args.count, seed=20261117)
+        counts = generate(DATASET, count=args.count, seed=args.seed)
         print("Synthetic data generated:", counts)
 
     df = pd.read_csv(DATASET)
@@ -130,8 +131,11 @@ def main() -> None:
     metadata = {
         "model_id": "himrakshak-synthetic-demo-tree-v2",
         "model_version": "2.0.0-demo-synthetic",
+        "dataset_revision": "240k-synthetic-reproducible-seed-20261117",
         "model_type": "DecisionTreeClassifier",
         "training_source": "synthetic_demonstration_scenarios_only",
+        "dataset_generation_method": "balanced_class_conditioned_monte_carlo_with_threshold_rule_rejection_and_measurement_noise",
+        "dataset_generation_seed": int(args.seed) if args.generate else None,
         "field_validated": False,
         "features": list(FEATURES),
         "feature_names": list(FEATURES),
@@ -147,7 +151,8 @@ def main() -> None:
         "sklearn_version": sklearn.__version__,
         "trained_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "limitations": [
-            "Synthetic scenario labels are generated from illustrative prototype rules.",
+            "Class labels are assigned by explicit illustrative threshold rules after balanced class-conditioned rejection sampling; they are not observed landslide outcomes.",
+            "Increasing the synthetic row count increases sampled combinations, not the amount of real-world evidence.",
             "Metrics measure agreement with synthetic labels, not real landslide prediction accuracy.",
             "Soil temperature, groundwater and some motion/vibration fields are virtual or derived demonstration proxies in Wokwi.",
         ],
@@ -158,7 +163,13 @@ def main() -> None:
     metadata["model_sha256"] = model_hash
     MODEL_JSON.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     MODEL_HEADER.write_text(render_header(tree_data, model_hash), encoding="utf-8")
-    metrics_only = {key: metadata[key] for key in ("model_id", "model_version", "model_type", "training_source", "field_validated", "features", "dataset_rows", "class_counts", "train_rows", "test_rows", "selected_metrics", "classification_report", "confusion_matrix", "candidate_models", "sklearn_version", "trained_at", "limitations", "model_sha256")}
+    metrics_only = {key: metadata[key] for key in (
+        "model_id", "model_version", "dataset_revision", "dataset_generation_method",
+        "dataset_generation_seed", "model_type", "training_source", "field_validated",
+        "features", "dataset_rows", "class_counts", "train_rows", "test_rows",
+        "selected_metrics", "classification_report", "confusion_matrix",
+        "candidate_models", "sklearn_version", "trained_at", "limitations", "model_sha256"
+    )}
     METRICS_JSON.write_text(json.dumps(metrics_only, indent=2) + "\n", encoding="utf-8")
     print("Selected model:", selected)
     print("Classification report:\n", classification_report(y_test, predictions, labels=[0, 1, 2], target_names=["NORMAL", "WARNING", "CRITICAL"], zero_division=0))

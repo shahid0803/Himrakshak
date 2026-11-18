@@ -73,7 +73,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(model["status"], "TRAINED_SYNTHETIC_DEMO_MODEL")
         self.assertFalse(model["field_validated"])
-        self.assertEqual(model["dataset_rows"], 2400)
+        self.assertEqual(model["dataset_rows"], 240000)
         for scenario, expected in (("normal", "NORMAL"), ("heavy_rain", "WARNING"), ("slope_shift", "CRITICAL"), ("vibration_burst", "WARNING")):
             status, result = self.request("POST", "/api/v2/demo", {"station_id": "HR-02", "scenario": scenario})
             self.assertEqual(status, 200)

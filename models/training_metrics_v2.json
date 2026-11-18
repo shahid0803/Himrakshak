@@ -1,6 +1,9 @@
 {
   "model_id": "himrakshak-synthetic-demo-tree-v2",
   "model_version": "2.0.0-demo-synthetic",
+  "dataset_revision": "240k-synthetic-reproducible-seed-20261117",
+  "dataset_generation_method": "balanced_class_conditioned_monte_carlo_with_threshold_rule_rejection_and_measurement_noise",
+  "dataset_generation_seed": 20261117,
   "model_type": "DecisionTreeClassifier",
   "training_source": "synthetic_demonstration_scenarios_only",
   "field_validated": false,
@@ -22,96 +25,97 @@
     "soil_temperature_c",
     "groundwater_depth_m"
   ],
-  "dataset_rows": 2400,
+  "dataset_rows": 240000,
   "class_counts": {
-    "0": 800,
-    "1": 800,
-    "2": 800
+    "0": 80000,
+    "1": 80000,
+    "2": 80000
   },
-  "train_rows": 1800,
-  "test_rows": 600,
+  "train_rows": 180000,
+  "test_rows": 60000,
   "selected_metrics": {
-    "accuracy": 0.9883333333333333,
-    "critical_recall": 0.995,
-    "nodes": 19,
-    "depth": 4
+    "accuracy": 0.9714,
+    "critical_recall": 0.99975,
+    "nodes": 53,
+    "depth": 5
   },
   "classification_report": {
     "NORMAL": {
-      "precision": 0.995,
-      "recall": 0.995,
-      "f1-score": 0.995,
-      "support": 200.0
+      "precision": 0.9997426129928961,
+      "recall": 0.97105,
+      "f1-score": 0.9851874397605641,
+      "support": 20000.0
     },
     "WARNING": {
-      "precision": 0.9898477157360406,
-      "recall": 0.975,
-      "f1-score": 0.982367758186398,
-      "support": 200.0
+      "precision": 0.9699773802179724,
+      "recall": 0.9434,
+      "f1-score": 0.9565041062557031,
+      "support": 20000.0
     },
     "CRITICAL": {
-      "precision": 0.9802955665024631,
-      "recall": 0.995,
-      "f1-score": 0.9875930521091811,
-      "support": 200.0
+      "precision": 0.946643310292586,
+      "recall": 0.99975,
+      "f1-score": 0.9724721560235398,
+      "support": 20000.0
     },
-    "accuracy": 0.9883333333333333,
+    "accuracy": 0.9714,
     "macro avg": {
-      "precision": 0.9883810940795011,
-      "recall": 0.9883333333333333,
-      "f1-score": 0.9883202700985264,
-      "support": 600.0
+      "precision": 0.9721211011678182,
+      "recall": 0.9714,
+      "f1-score": 0.9713879006799356,
+      "support": 60000.0
     },
     "weighted avg": {
-      "precision": 0.9883810940795013,
-      "recall": 0.9883333333333333,
-      "f1-score": 0.9883202700985263,
-      "support": 600.0
+      "precision": 0.9721211011678181,
+      "recall": 0.9714,
+      "f1-score": 0.9713879006799356,
+      "support": 60000.0
     }
   },
   "confusion_matrix": [
     [
-      199,
-      1,
+      19421,
+      579,
       0
     ],
     [
-      1,
-      195,
-      4
+      5,
+      18868,
+      1127
     ],
     [
       0,
-      1,
-      199
+      5,
+      19995
     ]
   ],
   "candidate_models": [
     {
-      "accuracy": 0.9883333333333333,
-      "critical_recall": 0.995,
-      "nodes": 19,
+      "accuracy": 0.9558,
+      "critical_recall": 0.9544,
+      "nodes": 29,
       "depth": 4
     },
     {
-      "accuracy": 0.9883333333333333,
-      "critical_recall": 0.995,
-      "nodes": 19,
-      "depth": 4
+      "accuracy": 0.9714,
+      "critical_recall": 0.99975,
+      "nodes": 53,
+      "depth": 5
     },
     {
-      "accuracy": 0.9883333333333333,
-      "critical_recall": 0.995,
-      "nodes": 19,
-      "depth": 4
+      "accuracy": 0.99385,
+      "critical_recall": 0.99635,
+      "nodes": 81,
+      "depth": 6
     }
   ],
-  "sklearn_version": "1.9.1",
-  "trained_at": "2026-11-17T11:40:30.685440Z",
+  "sklearn_version": "1.8.0",
+  "trained_at": "2026-11-18T07:11:59.264852Z",
   "limitations": [
-    "Synthetic scenario labels are generated from illustrative prototype rules.",
+    "Class labels are assigned by explicit illustrative threshold rules after balanced class-conditioned rejection sampling; they are not observed landslide outcomes.",
+    "Increasing the synthetic row count increases sampled combinations, not the amount of real-world evidence.",
     "Metrics measure agreement with synthetic labels, not real landslide prediction accuracy.",
     "Soil temperature, groundwater and some motion/vibration fields are virtual or derived demonstration proxies in Wokwi."
   ],
-  "model_sha256": "8a367c119bd164990705ff384d0e679ef30bf23ab472cbbf8db1fceedf6654db"
+  "model_sha256": "3514554320c709b507e1b27b2f5df15114d7a0102ef7815d707b1ad5cf298a70"
 }

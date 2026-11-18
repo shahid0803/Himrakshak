@@ -41,18 +41,25 @@ class TinyMLV2Tests(unittest.TestCase):
         self.assertIn("namespace HimRakshakTinyML", header_text)
         self.assertIn("inline int predict(const float *x)", header_text)
         self.assertIn("MODEL_SHA256", header_text)
+        patch_header = ROOT / "wokwi_remote_patch" / "HimRakshakModel.h"
+        self.assertTrue(patch_header.is_file())
+        self.assertEqual(patch_header.read_text(encoding="utf-8"), header_text)
         self.assertEqual(metadata["training_source"], "synthetic_demonstration_scenarios_only")
         self.assertFalse(metadata["field_validated"])
-        self.assertEqual(metadata["dataset_rows"], 2400)
+        self.assertEqual(metadata["dataset_rows"], 240000)
 
     def test_dataset_has_all_features_and_balanced_synthetic_classes(self):
         path = ROOT / "data" / "processed" / "himrakshak_synthetic_v2.csv"
         with path.open(newline="", encoding="utf-8") as handle:
-            rows = list(csv.DictReader(handle))
-        self.assertEqual(len(rows), 2400)
-        self.assertEqual(tuple(rows[0].keys()), FEATURES + ("risk_class",))
-        counts = {str(label): sum(int(row["risk_class"]) == label for row in rows) for label in (0, 1, 2)}
-        self.assertEqual(counts, {"0": 800, "1": 800, "2": 800})
+            reader = csv.DictReader(handle)
+            self.assertEqual(tuple(reader.fieldnames or ()), FEATURES + ("risk_class",))
+            counts = {"0": 0, "1": 0, "2": 0}
+            total = 0
+            for row in reader:
+                counts[str(int(row["risk_class"]))] += 1
+                total += 1
+        self.assertEqual(total, 240000)
+        self.assertEqual(counts, {"0": 80000, "1": 80000, "2": 80000})
 
     def test_v2_scenarios_validate_and_return_expected_demo_states(self):
         expected = {
@@ -81,6 +88,16 @@ class TinyMLV2Tests(unittest.TestCase):
             packet = make_v2_packet("HR-01", 1, scenario)
             self.assertEqual(packet["tinyml_prediction"], predict_reading(packet))
             self.assertEqual(packet["tinyml_prediction"], expected_class, scenario)
+
+    def test_hr01_wokwi_slope_movement_log_remains_critical(self):
+        # Representative 16-feature vector from the HR-01 Wokwi
+        # slope_movement Serial Monitor evidence (units/order follow FEATURES).
+        values = [
+            9.6, 1.6, 1.6, 58.0, 63.00365, 74.00243, 2.27803, 0.49632,
+            0.0, 2.27843, 3.13567, 0.09729, 0.13899, 9.61852, 16.90318, 1.85,
+        ]
+        from himrakshak.tinyml import predict_features
+        self.assertEqual(predict_features(values), 2)
 
     def test_v2_missing_feature_is_rejected(self):
         packet = make_v2_packet("HR-01", 1, "normal")

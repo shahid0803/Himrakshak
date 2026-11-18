@@ -109,21 +109,75 @@ def sample_for_class(rng: random.Random, risk_class: int) -> dict[str, float | i
             vib_peak = rng.uniform(0.2, 1.35)
             groundwater = rng.uniform(0.9, 4.8)
     else:
-        rain_intensity = rng.uniform(32, 80)
-        rain_1h = rng.uniform(18, 68)
-        rain_24h = rng.uniform(82, 260)
-        surface = rng.uniform(68, 100)
-        subsurface = clamp(surface * rng.uniform(0.82, 1.08) + rng.gauss(0, 6), 62, 100)
-        pore = clamp(subsurface * rng.uniform(0.95, 1.5) + rng.gauss(28, 15), 78, 160)
-        tilt_x = rng.uniform(6.0, 15.0)
-        tilt_y = clamp(tilt_x * rng.uniform(0.2, 0.62) + rng.gauss(0, 0.65), 1, 10)
-        tilt_rate = rng.uniform(0.9, 8.0)
-        displacement = clamp(tilt_x * rng.uniform(1.8, 3.8) + rng.uniform(4, 14), 15, 60)
-        displacement_rate = rng.uniform(1.15, 10.0)
-        vib_rms = rng.uniform(0.18, 1.5)
-        vib_peak = rng.uniform(0.55, 3.5)
-        groundwater = rng.uniform(0.2, 2.6)
-    # Add mild measurement noise while retaining the declared scenario class.
+        # Critical profiles deliberately cover several independent failure
+        # indicators. In particular, displacement-rate critical cases include
+        # moderate tilt/rain values similar to the HR-01 Wokwi slope scenario.
+        subtype = rng.random()
+        if subtype < 0.30:
+            # Rapid displacement with otherwise moderate environmental values.
+            rain_intensity = rng.uniform(0, 30)
+            rain_1h = rng.uniform(0, 8)
+            rain_24h = rng.uniform(0, 60)
+            surface = rng.uniform(35, 70)
+            subsurface = rng.uniform(35, 72)
+            pore = rng.uniform(45, 82)
+            tilt_x = rng.uniform(0.8, 5.8)
+            tilt_y = rng.uniform(0, 2.5)
+            tilt_rate = rng.uniform(0.1, 1.6)
+            displacement = rng.uniform(3, 15)
+            displacement_rate = rng.uniform(2.5, 8.5)
+            vib_rms = rng.uniform(0.05, 0.65)
+            vib_peak = rng.uniform(0.15, 1.5)
+            groundwater = rng.uniform(1.9, 6.5)
+        elif subtype < 0.55:
+            # High pore pressure with elevated subsurface moisture.
+            rain_intensity = rng.uniform(10, 60)
+            rain_1h = rng.uniform(4, 35)
+            rain_24h = rng.uniform(20, 150)
+            surface = rng.uniform(55, 90)
+            subsurface = rng.uniform(80, 100)
+            pore = rng.uniform(118, 160)
+            tilt_x = rng.uniform(1.5, 8.2)
+            tilt_y = rng.uniform(0.1, 5.0)
+            tilt_rate = rng.uniform(0.1, 1.7)
+            displacement = rng.uniform(4, 24)
+            displacement_rate = rng.uniform(0.1, 2.0)
+            vib_rms = rng.uniform(0.05, 0.8)
+            vib_peak = rng.uniform(0.2, 1.6)
+            groundwater = rng.uniform(1.9, 4.8)
+        elif subtype < 0.80:
+            # Prolonged heavy rainfall combined with saturated surface soil.
+            rain_intensity = rng.uniform(35, 80)
+            rain_1h = rng.uniform(15, 70)
+            rain_24h = rng.uniform(155, 270)
+            surface = rng.uniform(78, 100)
+            subsurface = rng.uniform(72, 100)
+            pore = rng.uniform(84, 125)
+            tilt_x = rng.uniform(3.0, 8.2)
+            tilt_y = rng.uniform(0.2, 5.0)
+            tilt_rate = rng.uniform(0.1, 1.7)
+            displacement = rng.uniform(5, 30)
+            displacement_rate = rng.uniform(0.1, 2.0)
+            vib_rms = rng.uniform(0.08, 1.0)
+            vib_peak = rng.uniform(0.2, 2.0)
+            groundwater = rng.uniform(1.9, 3.5)
+        else:
+            # Rapid tilt-rate combined with elevated pore pressure.
+            rain_intensity = rng.uniform(5, 55)
+            rain_1h = rng.uniform(3, 30)
+            rain_24h = rng.uniform(10, 140)
+            surface = rng.uniform(45, 85)
+            subsurface = rng.uniform(60, 95)
+            pore = rng.uniform(85, 120)
+            tilt_x = rng.uniform(0.5, 8.2)
+            tilt_y = rng.uniform(0.1, 5.0)
+            tilt_rate = rng.uniform(2.3, 8.0)
+            displacement = rng.uniform(3, 25)
+            displacement_rate = rng.uniform(0.1, 2.0)
+            vib_rms = rng.uniform(0.05, 0.8)
+            vib_peak = rng.uniform(0.2, 1.8)
+            groundwater = rng.uniform(1.9, 5.5)
+    # Add mild measurement noise; generate() assigns the final rule-based class.
     rain_intensity = clamp(rain_intensity + rng.gauss(0, 2), 0, 80)
     rain_1h = clamp(rain_1h + rng.gauss(0, 1.5), 0, 80)
     rain_24h = clamp(rain_24h + rng.gauss(0, 5), 0, 300)
@@ -161,9 +215,33 @@ def sample_for_class(rng: random.Random, risk_class: int) -> dict[str, float | i
     }
 
 
-def generate(path: Path, count: int = 2400, seed: int = 20261117) -> dict[str, int]:
+def generate(path: Path, count: int = 240000, seed: int = 20261117) -> dict[str, int]:
+    if count <= 0 or count % 3 != 0:
+        raise ValueError("count must be a positive multiple of 3 for exact class balance")
     rng = random.Random(seed)
-    rows = [sample_for_class(rng, index % 3) for index in range(count)]
+    rows: list[dict[str, float | int]] = []
+    per_class = count // 3
+    # Rejection-sample each class until its features satisfy the same explicit
+    # demonstration rules used to define NORMAL/WARNING/CRITICAL labels.
+    # This keeps the set exactly balanced without forcing a potentially
+    # contradictory label onto a feature vector.
+    for target_class in (0, 1, 2):
+        accepted = 0
+        attempts = 0
+        max_attempts = per_class * 25
+        while accepted < per_class:
+            attempts += 1
+            candidate = sample_for_class(rng, target_class)
+            actual_class = label_sample(candidate)
+            if actual_class == target_class:
+                candidate["risk_class"] = actual_class
+                rows.append(candidate)
+                accepted += 1
+            if attempts > max_attempts:
+                raise RuntimeError(
+                    f"Could not generate enough class {target_class} rows; "
+                    f"accepted {accepted}/{per_class} after {attempts} attempts"
+                )
     rng.shuffle(rows)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -177,7 +255,7 @@ def generate(path: Path, count: int = 2400, seed: int = 20261117) -> dict[str, i
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="data/processed/himrakshak_synthetic_v2.csv")
-    parser.add_argument("--count", type=int, default=2400)
+    parser.add_argument("--count", type=int, default=240000)
     parser.add_argument("--seed", type=int, default=20261117)
     args = parser.parse_args()
     counts = generate(Path(args.output), args.count, args.seed)
