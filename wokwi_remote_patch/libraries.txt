@@ -1,0 +1,11 @@
+# HimRakshak V2 - Wokwi Arduino library dependencies
+# Place this file beside diagram.json and sketch.ino.
+# Wokwi installs these libraries for the ESP32 simulation.
+
+Adafruit MPU6050
+Adafruit Unified Sensor
+Adafruit BusIO
+Adafruit BMP280 Library
+DHT sensor library
+OneWire
+DallasTemperature

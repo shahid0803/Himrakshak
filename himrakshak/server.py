@@ -201,8 +201,25 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Connection", "close")
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_cors_headers(self) -> None:
+        origin = self.headers.get("Origin")
+        configured = os.environ.get("HIMRAKSHAK_ALLOWED_ORIGINS", "*")
+        allowed = {item.strip() for item in configured.split(",") if item.strip()}
+        if "*" in allowed:
+            self.send_header("Access-Control-Allow-Origin", "*")
+        elif origin and origin in allowed:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Accept, X-HimRakshak-Admin",
+        )
+        self.send_header("Access-Control-Max-Age", "600")
 
     def _send_error(
         self, status: int, message: str, details: Mapping[str, Any] | None = None
@@ -233,6 +250,7 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Retry-After", str(seconds))
         self.send_header("Connection", "close")
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -342,6 +360,12 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
             return None
         return station, action
 
+    def do_OPTIONS(self) -> None:
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self._send_cors_headers()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self) -> None:
         self._discard_request_body()
         path = self._api_path()
@@ -433,6 +457,21 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
         if self._fault_action(path) is not None:
             self._send_error(HTTPStatus.METHOD_NOT_ALLOWED, "Method not allowed")
             return
+        command_station = self._station_id(path, "/simulation-command")
+        if command_station is not None:
+            query = urlsplit(self.path).query
+            params = dict(
+                item.split("=", 1) if "=" in item else (item, "")
+                for item in query.split("&") if item
+            )
+            try:
+                result = self.manager.get_simulation_command(
+                    command_station, unquote(params.get("device_id", "")) or None
+                )
+                self._send_json(HTTPStatus.OK, result)
+            except KeyError:
+                self._send_error(HTTPStatus.NOT_FOUND, "Unknown station")
+            return
         station_id = self._station_id(path, "")
         if station_id is not None:
             try:
@@ -447,6 +486,19 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
             return
         if path.startswith("/api/"):
             self._send_error(HTTPStatus.NOT_FOUND, "Unknown API route")
+            return
+        if path == "/wokwi-config.js":
+            try:
+                body = (PROJECT_ROOT / "wokwi-config.js").read_bytes()
+            except OSError:
+                self._send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Wokwi configuration is unavailable")
+                return
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "application/javascript; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
             return
         if path in {"/", "/index.html"}:
             try:
@@ -471,6 +523,38 @@ class HimRakshakHandler(BaseHTTPRequestHandler):
                 return
             self._handle_fault(*fault)
             return
+        command_ack_station = self._station_id(path, "/simulation-command/ack")
+        if command_ack_station is not None:
+            payload = self._read_json()
+            if payload is None:
+                return
+            try:
+                result = self.manager.acknowledge_simulation_command(
+                    command_ack_station, payload
+                )
+                self._send_json(HTTPStatus.OK, result)
+            except KeyError:
+                self._send_error(HTTPStatus.NOT_FOUND, "Unknown station")
+            except ValueError as exc:
+                self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
+            return
+
+        command_station = self._station_id(path, "/simulation-command")
+        if command_station is not None:
+            if not self._check_admin_auth():
+                return
+            payload = self._read_json()
+            if payload is None:
+                return
+            try:
+                result = self.manager.set_simulation_command(command_station, payload)
+                self._send_json(HTTPStatus.ACCEPTED, result)
+            except KeyError:
+                self._send_error(HTTPStatus.NOT_FOUND, "Unknown station")
+            except ValueError as exc:
+                self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
+            return
+
         if path == "/api/v2/demo":
             if not self._check_admin_auth():
                 return

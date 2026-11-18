@@ -81,6 +81,142 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(result["assessment"]["risk_level"], expected)
             self.assertTrue(result["reading"]["is_simulated"])
 
+    def test_live_wokwi_command_queue_poll_and_ack(self):
+        command = {
+            "mode": "custom",
+            "scenario": "normal",
+            "sensor_values": {
+                "rainfall_intensity_mm_h": 52.5,
+                "surface_moisture_pct": 76.0,
+                "subsurface_moisture_pct": 71.0,
+                "pore_pressure_kpa": 82.0,
+                "tilt_x_deg": 5.5,
+                "tilt_y_deg": 1.2,
+                "ground_displacement_mm": 8.0,
+                "vibration_rms_g": 0.22,
+                "vibration_frequency_hz": 9.5,
+                "soil_temperature_c": 18.5,
+                "groundwater_depth_m": 1.4,
+                "air_temperature_c": 20.0,
+                "relative_humidity_pct": 82.0,
+                "atmospheric_pressure_hpa": 1008.0,
+            },
+        }
+        status, queued = self.request(
+            "POST", "/api/stations/HR-01/simulation-command", command
+        )
+        self.assertEqual(status, 202)
+        self.assertEqual(queued["version"], 1)
+        status, polled = self.request(
+            "GET", "/api/stations/HR-01/simulation-command?device_id=HR-01-WOKWI"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(polled["version"], 1)
+        self.assertTrue(polled["pending"])
+        self.assertEqual(polled["mode"], "custom")
+        self.assertEqual(polled["rainfall_intensity_mm_h"], 52.5)
+        self.assertEqual(polled["surface_moisture_pct"], 76.0)
+        status, acknowledged = self.request(
+            "POST", "/api/stations/HR-01/simulation-command/ack",
+            {"version": 1, "device_id": "HR-01-WOKWI"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(acknowledged["acknowledged_version"], 1)
+        status, details = self.request("GET", "/api/stations/HR-01")
+        self.assertEqual(status, 200)
+        self.assertTrue(details["station"]["simulation_control"]["device_online"])
+        self.assertEqual(details["station"]["simulation_control"]["acknowledged_version"], 1)
+
+    def test_wokwi_v2_edge_packet_is_accepted_and_exposed_as_device_telemetry(self):
+        packet = {
+            "node_id": "HR-01", "sequence": 0, "timestamp": "SIMULATED",
+            "soil_moisture_pct": 58.0, "tilt_deg": 2.28,
+            "vibration_level": 9.73, "battery_pct": 88.0,
+            "sensor_schema_version": 2,
+            "rainfall_intensity_mm_h": 9.6, "rainfall_1h_mm": 1.6,
+            "rainfall_24h_mm": 1.6, "soil_moisture_surface_pct": 58.0,
+            "soil_moisture_subsurface_pct": 63.0, "pore_water_pressure_kpa": 74.0,
+            "tilt_x_deg": 2.28, "tilt_y_deg": 0.50, "tilt_rate_deg_per_h": 0.0,
+            "ground_displacement_mm": 2.28, "ground_displacement_rate_mm_per_h": 3.13,
+            "vibration_rms_g": 0.097, "vibration_peak_g": 0.139,
+            "vibration_dominant_hz": 9.62, "soil_temperature_c": 16.9,
+            "groundwater_depth_m": 1.85, "air_temperature_c": 18.8,
+            "relative_humidity_pct": 56.1, "atmospheric_pressure_hpa": 1011.8,
+            "tinyml_prediction": 2, "model_ready": True,
+            "feature_inputs_valid": True, "rainfall_history_valid": True,
+            "groundwater_valid": True, "dht22_valid": True, "bmp280_valid": True,
+            "model_id": "himrakshak-synthetic-demo-tree-v2",
+            "model_sha256": "a54175fdad7bb68f249e58fed707437aa6cf0f0c3d1ba5cd27941a8fd40db412",
+            "measurement_provenance": "WOKWI_SYNTHETIC_SCENARIO_STIMULUS",
+            "rainfall_history_mode": "ROLLING_FROM_BOOT_ACCELERATED_60X",
+            "risk": "CRITICAL", "risk_score_demo": 34,
+            "scenario": "slope_movement", "sensor_health": "OK",
+            "transport": "WOKWI_SOFTWARE_SIMULATION", "is_simulated": True,
+        }
+        status, result = self.request(
+            "POST", "/api/stations/HR-01/readings", packet
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(result["reading"]["transport"], "WOKWI_SOFTWARE_SIMULATION")
+        self.assertEqual(result["reading"]["tinyml_prediction"], 2)
+        status, details = self.request("GET", "/api/stations/HR-01")
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            details["station"]["latest"]["reading"]["measurement_provenance"],
+            "WOKWI_SYNTHETIC_SCENARIO_STIMULUS",
+        )
+
+    def test_live_wokwi_command_validation_and_cors_preflight(self):
+        status, error = self.request(
+            "POST", "/api/stations/HR-01/simulation-command",
+            {"mode": "custom", "sensor_values": {"rainfall_intensity_mm_h": 250}},
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("error", error)
+        connection = HTTPConnection(self.host, self.port, timeout=3)
+        connection.request(
+            "OPTIONS", "/api/stations/HR-01/simulation-command",
+            headers={"Origin": "https://example.github.io", "Access-Control-Request-Method": "POST"},
+        )
+        response = connection.getresponse()
+        response.read()
+        self.assertEqual(response.status, 204)
+        self.assertEqual(response.getheader("Access-Control-Allow-Origin"), "*")
+        self.assertIn("X-HimRakshak-Admin", response.getheader("Access-Control-Allow-Headers"))
+        connection.close()
+
+    def test_live_wokwi_command_requires_admin_key_in_remote_mode(self):
+        config = ServerConfig(
+            host="127.0.0.1", port=0, allow_remote=True,
+            admin_key="test-admin-key", rate_limit_interval=0.0,
+        )
+        server = HimRakshakServer(config, seed=24)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        host, port = server.server_address
+        try:
+            connection = HTTPConnection(host, port, timeout=3)
+            body = json.dumps({"mode": "scenario", "scenario": "heavy_rain"}).encode()
+            connection.request("POST", "/api/stations/HR-01/simulation-command", body=body,
+                               headers={"Content-Type": "application/json"})
+            response = connection.getresponse()
+            response.read()
+            self.assertEqual(response.status, 401)
+            connection.close()
+
+            connection = HTTPConnection(host, port, timeout=3)
+            connection.request("POST", "/api/stations/HR-01/simulation-command", body=body,
+                               headers={"Content-Type": "application/json", "X-HimRakshak-Admin": "test-admin-key"})
+            response = connection.getresponse()
+            payload = json.loads(response.read())
+            self.assertEqual(response.status, 202)
+            self.assertEqual(payload["command"]["scenario"], "heavy_rain")
+            connection.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_canonical_and_alias_ingestion(self):
         status, result = self.request("POST", "/api/readings", self.packet())
         self.assertEqual(status, 200)
@@ -148,6 +284,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.request("GET", "/missing")[0], 404)
         self.assertEqual(self.request("PUT", "/api/health")[0], 405)
         self.assertEqual(self.request("GET", "/")[0], 200)
+        config_status, config_body = self.request("GET", "/wokwi-config.js")
+        self.assertEqual(config_status, 200)
+        self.assertIn(b"HIMRAKSHAK_API_BASE", config_body)
 
     def test_dashboard_uses_same_origin_backend_sync(self):
         status, body = self.request("GET", "/")

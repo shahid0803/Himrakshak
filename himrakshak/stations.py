@@ -7,6 +7,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import threading
+import math
 from typing import Any, Mapping
 
 from .risk import assess_risk
@@ -21,6 +22,78 @@ STATION_ROSTER = (
     ("HR-03", "Virtual Station 3"),
 )
 MAX_EVENTS = 100
+
+REMOTE_SCENARIOS = {
+    "normal", "heavy_rain", "slope_movement", "slope_shift",
+    "vibration_burst", "groundwater_change", "sensor_failure",
+}
+REMOTE_SENSOR_DEFAULTS = {
+    "rainfall_intensity_mm_h": 8.0,
+    "surface_moisture_pct": 32.0,
+    "subsurface_moisture_pct": 36.0,
+    "pore_pressure_kpa": 28.0,
+    "tilt_x_deg": 1.2,
+    "tilt_y_deg": 0.2,
+    "ground_displacement_mm": 2.0,
+    "vibration_rms_g": 0.02,
+    "vibration_frequency_hz": 8.0,
+    "soil_temperature_c": 17.0,
+    "groundwater_depth_m": 6.8,
+    "air_temperature_c": 19.0,
+    "relative_humidity_pct": 56.0,
+    "atmospheric_pressure_hpa": 1012.0,
+}
+REMOTE_SENSOR_RANGES = {
+    "rainfall_intensity_mm_h": (0.0, 200.0),
+    "surface_moisture_pct": (0.0, 100.0),
+    "subsurface_moisture_pct": (0.0, 100.0),
+    "pore_pressure_kpa": (0.0, 160.0),
+    "tilt_x_deg": (-15.0, 15.0),
+    "tilt_y_deg": (-15.0, 15.0),
+    "ground_displacement_mm": (0.0, 25.0),
+    "vibration_rms_g": (0.0, 1.5),
+    "vibration_frequency_hz": (0.0, 20.0),
+    "soil_temperature_c": (-10.0, 60.0),
+    "groundwater_depth_m": (0.2, 20.0),
+    "air_temperature_c": (-20.0, 60.0),
+    "relative_humidity_pct": (0.0, 100.0),
+    "atmospheric_pressure_hpa": (800.0, 1100.0),
+}
+
+
+def validate_simulation_command(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize and validate a versioned command for a running Wokwi sender."""
+    if not isinstance(payload, Mapping):
+        raise ValueError("command payload must be an object")
+    mode = payload.get("mode", "scenario")
+    if mode not in {"scenario", "custom"}:
+        raise ValueError("mode must be 'scenario' or 'custom'")
+    scenario = payload.get("scenario", "normal")
+    if not isinstance(scenario, str):
+        raise ValueError("scenario must be a string")
+    scenario = scenario.strip().lower().replace("-", "_")
+    if scenario == "slope_shift":
+        scenario = "slope_movement"
+    if scenario not in REMOTE_SCENARIOS:
+        raise ValueError("unsupported scenario")
+
+    command: dict[str, Any] = {"mode": mode, "scenario": scenario}
+    if mode == "custom":
+        supplied = payload.get("sensor_values", payload)
+        if not isinstance(supplied, Mapping):
+            raise ValueError("sensor_values must be an object")
+        values = dict(REMOTE_SENSOR_DEFAULTS)
+        for field, (low, high) in REMOTE_SENSOR_RANGES.items():
+            if field in supplied:
+                value = supplied[field]
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise ValueError(f"{field} must be a finite number")
+                value = float(value)
+                if not math.isfinite(value) or not low <= value <= high:
+                    raise ValueError(f"{field} must be between {low:g} and {high:g}")
+                values[field] = value
+        command["sensor_values"] = values
+    return command
 
 
 @dataclass(frozen=True)
@@ -45,6 +118,36 @@ class StationState:
         self.reliability = ReliabilityStats()
         self.pending: deque[PendingPacket] = deque(maxlen=MAX_PENDING_PACKETS)
         self._pending_order = 0
+        self.simulation_command_version = 0
+        self.simulation_command: dict[str, Any] | None = None
+        self.simulation_command_acked_version = 0
+        self.simulation_command_issued_at: str | None = None
+        self.simulation_command_acknowledged_at: str | None = None
+        self.device_last_seen_at: str | None = None
+        self.device_id: str | None = None
+
+    def simulation_control_status(self) -> dict[str, Any]:
+        now = datetime.now(timezone.utc)
+        last_seen = None
+        online = False
+        if self.device_last_seen_at:
+            try:
+                last_seen = datetime.fromisoformat(self.device_last_seen_at.replace("Z", "+00:00"))
+                online = (now - last_seen).total_seconds() <= 20.0
+            except ValueError:
+                online = False
+        return {
+            "command_version": self.simulation_command_version,
+            "acknowledged_version": self.simulation_command_acked_version,
+            "pending": self.simulation_command_version > self.simulation_command_acked_version,
+            "issued_at": self.simulation_command_issued_at,
+            "acknowledged_at": self.simulation_command_acknowledged_at,
+            "device_last_seen_at": self.device_last_seen_at,
+            "device_online": online,
+            "device_id": self.device_id,
+            "mode": self.simulation_command.get("mode") if self.simulation_command else "scenario",
+            "scenario": self.simulation_command.get("scenario") if self.simulation_command else self.scenario,
+        }
 
     @property
     def next_sequence(self) -> int:
@@ -59,6 +162,7 @@ class StationState:
                 "receiver_connected": self.receiver_connected,
                 "next_sequence": self.next_sequence,
                 "latest": deepcopy(self.latest),
+                "simulation_control": self.simulation_control_status(),
                 "event_count": len(self.events),
                 "communication": self.reliability.as_dict(
                     len(self.pending), self.receiver_connected
@@ -82,6 +186,66 @@ class StationManager:
             return self.stations[node_id]
         except KeyError as exc:
             raise KeyError(f"unknown station {node_id!r}") from exc
+
+    def set_simulation_command(self, node_id: str, payload: Mapping[str, Any]) -> dict[str, Any]:
+        station = self.get(node_id)
+        command = validate_simulation_command(payload)
+        with station.lock:
+            station.simulation_command_version += 1
+            station.simulation_command = deepcopy(command)
+            station.simulation_command_issued_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            station.scenario = command["scenario"]
+            return {
+                "station_id": node_id,
+                "version": station.simulation_command_version,
+                "command": deepcopy(command),
+                "simulation_control": station.simulation_control_status(),
+            }
+
+    def get_simulation_command(self, node_id: str, device_id: str | None = None) -> dict[str, Any]:
+        station = self.get(node_id)
+        now_text = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        with station.lock:
+            station.device_last_seen_at = now_text
+            if device_id:
+                station.device_id = str(device_id)[:80]
+            command = deepcopy(station.simulation_command) if station.simulation_command else {
+                "mode": "scenario", "scenario": "normal"
+            }
+            response: dict[str, Any] = {
+                "station_id": node_id,
+                "version": station.simulation_command_version,
+                "acknowledged_version": station.simulation_command_acked_version,
+                "has_command": station.simulation_command_version > 0,
+                "pending": station.simulation_command_version > station.simulation_command_acked_version,
+                "issued_at": station.simulation_command_issued_at,
+                **command,
+            }
+            if command.get("mode") == "custom":
+                response.update(deepcopy(command.get("sensor_values", {})))
+            return response
+
+    def acknowledge_simulation_command(
+        self, node_id: str, payload: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        station = self.get(node_id)
+        version = payload.get("version") if isinstance(payload, Mapping) else None
+        if isinstance(version, bool) or not isinstance(version, int) or version < 0:
+            raise ValueError("version must be a non-negative integer")
+        with station.lock:
+            if version > station.simulation_command_version:
+                raise ValueError("cannot acknowledge a command version that has not been issued")
+            if version > station.simulation_command_acked_version:
+                station.simulation_command_acked_version = version
+                station.simulation_command_acknowledged_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            device_id = payload.get("device_id") if isinstance(payload, Mapping) else None
+            if isinstance(device_id, str) and device_id.strip():
+                station.device_id = device_id.strip()[:80]
+            return {
+                "station_id": node_id,
+                "acknowledged_version": station.simulation_command_acked_version,
+                "simulation_control": station.simulation_control_status(),
+            }
 
     def _event(
         self,
@@ -205,6 +369,7 @@ class StationManager:
                 "receiver_connected": station.receiver_connected,
                 "next_sequence": station.next_sequence,
                 "latest": deepcopy(station.latest),
+                "simulation_control": station.simulation_control_status(),
                 "events": deepcopy(list(station.events)),
                 "event_count": len(station.events),
                 "pending": [deepcopy(packet.reading) for packet in station.pending],
